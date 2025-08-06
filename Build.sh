@@ -11,6 +11,6 @@ bear -- make
 
 echo -e "\n--- Running program ---"
 mv compile_commands.json ../
-perf stat ./MyExecutable
+./MyExecutable
 
 

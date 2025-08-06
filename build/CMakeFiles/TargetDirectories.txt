@@ -1,3 +1,0 @@
-/home/esben/programming/RayTracing/build/CMakeFiles/MyExecutable.dir
-/home/esben/programming/RayTracing/build/CMakeFiles/edit_cache.dir
-/home/esben/programming/RayTracing/build/CMakeFiles/rebuild_cache.dir

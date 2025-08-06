@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(Raytrace)
+project(IMGPROCESSOR)
 
 # Use C++20
 set(CMAKE_CXX_STANDARD 20)
@@ -12,6 +12,7 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -fno-omit-frame-pointer -fno-inline -
 # Optional: Make sure CMake doesn't overwrite these with toolchain defaults
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type" FORCE)
 
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 # Source files
 file(GLOB SOURCES "src/*.cpp")
 
@@ -22,4 +23,5 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 # Executable
 add_executable(MyExecutable ${SOURCES})
 target_include_directories(MyExecutable PUBLIC include)
+target_link_libraries(MyExecutable Qt6::Widgets)
 

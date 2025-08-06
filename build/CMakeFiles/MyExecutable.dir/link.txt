@@ -1,1 +1,0 @@
-/usr/bin/c++ -O2 -g -fno-omit-frame-pointer -fno-inline -fopt-info-vec-optimized=vec.log  -Wl,--dependency-file=CMakeFiles/MyExecutable.dir/link.d CMakeFiles/MyExecutable.dir/src/main.cpp.o "CMakeFiles/MyExecutable.dir/src/object-importer.cpp.o" -o MyExecutable
