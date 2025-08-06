@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/esben/programming/RayTracing/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
