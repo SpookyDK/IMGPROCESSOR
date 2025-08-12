@@ -2,6 +2,7 @@
 
 set -e
 
+clear
 mkdir -p build
 
 cd build
@@ -11,6 +12,6 @@ bear -- make
 
 echo -e "\n--- Running program ---"
 mv compile_commands.json ../
-./MyExecutable
+perf stat ./MyExecutable
 
 
