@@ -5,6 +5,8 @@
 #include <numbers>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image/stb_image_write.h>
 #include <iostream>
 #include <iostream>
 #include <chrono>
@@ -56,6 +58,10 @@ void Adjust_Brightness(unsigned char* __restrict image, int& width, int& height,
         }
         return;
 }
+void Export_Image(const unsigned char* __restrict image, int& width, int& height, int&channels, const char* filepath){
+    stbi_write_jpg(filepath, width, height, channels, image, 0);
+
+}
 
 
 
@@ -87,6 +93,14 @@ int main(int argc, char *argv[]) {
     end_time = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "\nBrightness time = " << duration.count() << " ms\n";
+
+    start_time = std::chrono::high_resolution_clock::now();
+
+    Export_Image(data, width, height, channels, "export.JPG");
+
+    end_time = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "\nImage Write Time = " << duration.count() << " ms\n";
     // QApplication app(argc, argv);
     // QImage qimg(data, width, height, width * 3, QImage::Format_RGB888);
     // QLabel* label = new QLabel;
