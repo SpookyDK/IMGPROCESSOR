@@ -5,6 +5,10 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QDockWidget>
+#include <QVBoxLayout>
+#include <QPushButton>
+#include <QListWidget>
 #include "image_functions.h"
 #include "iostream"
 
@@ -45,8 +49,37 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                     }
             });
     toolbar-> addAction(openFileAction);
+    toolbar->setIconSize(QSize(32,32));
     addToolBar(toolbar);
+    // QDockWidget* dock = new QDockWidget("Sidebar", this);
+    // dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    // dock->setMinimumWidth(300);
+    // addDockWidget(Qt::RightDockWidgetArea, dock);
+    QDockWidget* dock = new QDockWidget("Effect Layers", this);
+    dock->setFeatures(QDockWidget::DockWidgetMovable); // allow moving sidebar
 
+    // Sidebar content
+    QWidget* sidebarWidget = new QWidget;
+    QVBoxLayout* layout = new QVBoxLayout(sidebarWidget);
+
+    // Add button at the top (optional)
+    QPushButton* addButton = new QPushButton("Add Layer");
+    addButton->setMinimumHeight(40);
+    addButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(addButton);
+
+    // Effect layers list
+    QListWidget* layersList = new QListWidget;
+    layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
+    layersList->setSelectionMode(QAbstractItemView::SingleSelection);
+    layout->addWidget(layersList);
+
+    layout->addStretch();
+    connect(addButton, &QPushButton::clicked, this, [layersList]() {
+        layersList->addItem("New Effect Layer");
+    });
+    dock->setWidget(sidebarWidget);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
 
 }
 
