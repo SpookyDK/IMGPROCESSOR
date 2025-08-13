@@ -29,11 +29,11 @@
       "-I",
       "/opt/cuda/include",
       "-o",
-      "CMakeFiles/MyExecutable.dir/src/main.cpp.o",
-      "/home/esben/programming/IMGPROCESSOR/src/main.cpp"
+      "CMakeFiles/MyExecutable.dir/src/mainwindow.cpp.o",
+      "/home/esben/programming/IMGPROCESSOR/src/mainwindow.cpp"
     ],
     "directory": "/home/esben/programming/IMGPROCESSOR/build",
-    "file": "/home/esben/programming/IMGPROCESSOR/src/main.cpp",
-    "output": "/home/esben/programming/IMGPROCESSOR/build/CMakeFiles/MyExecutable.dir/src/main.cpp.o"
+    "file": "/home/esben/programming/IMGPROCESSOR/src/mainwindow.cpp",
+    "output": "/home/esben/programming/IMGPROCESSOR/build/CMakeFiles/MyExecutable.dir/src/mainwindow.cpp.o"
   }
 ]
