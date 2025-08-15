@@ -7,6 +7,7 @@
 #include <algorithm>
 
 
+
 unsigned char* Load_Image(const char* filepath, int& width, int& height, int& channels){
 
     unsigned char* data = stbi_load(filepath, &width, &height, &channels, 3);
@@ -15,6 +16,7 @@ unsigned char* Load_Image(const char* filepath, int& width, int& height, int& ch
     }
     return data;
 }
+
 void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& height, int& channels){
     if (image){
         unsigned char* __restrict rotated = (unsigned char*) malloc(width * height * channels);
@@ -40,6 +42,7 @@ void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& h
         }
     }
 }
+
 void Adjust_Brightness(unsigned char* __restrict image, int& width, int& height, int& channels, int adjustmeant){
         int end = width * height * channels;
         int i = 0;
@@ -54,8 +57,46 @@ void Adjust_Brightness(unsigned char* __restrict image, int& width, int& height,
         }
         return;
 }
+
 void Export_Image(const unsigned char* __restrict image, int& width, int& height, int&channels, const char* filepath){
     stbi_write_jpg(filepath, width, height, channels, image, 0);
 
 }
 
+void Handle_Effects(ImageEffects Effects, std::vector<unsigned char*> images, int stopPoint){
+    int index = 0;
+    int end = Effects.changed.size();
+    int changeIndex = end;
+    bool needsProcessing = false;
+    int lastCache = 0;
+    while (index < end){
+        if (Effects.changed[index] == true){
+            changeIndex = index;
+            needsProcessing = true;
+            break;
+        } else if (Effects.imageCached[index]){
+            lastCache = index;
+            }
+        index ++;
+    } 
+    if (needsProcessing){
+        index = lastCache + 1;
+        end = Effects.effects.size();
+        while (index < end){
+            switch(Effects.effects[index]){
+            case Brightness :
+                std::cout << "test";
+                break;
+            case Contrast : 
+                break;
+            case Saturation :
+                break;
+            case Vibrancy :
+                break;
+            }
+            index ++;
+        }
+
+    }else{return;}
+
+}
