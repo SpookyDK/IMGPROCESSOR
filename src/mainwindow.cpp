@@ -41,8 +41,22 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                         } else {
                             FilePath = fileName;
                             QByteArray byteArray = fileName.toUtf8();
-                            imageData = Load_Image(byteArray.constData(), width, height, channels);
-                            qimg = QImage(imageData, width, height, width * channels, QImage::Format_RGB888);
+                            images.clear();
+                            int width = 0, height = 0, channels = 0;
+                            unsigned char* data = Load_Image(byteArray.constData(), width, height, channels);
+
+                            // Force 3 channels for safety
+                            const int channelsRGB = 3;
+
+                            images.push_back(Image(data, width, height, channelsRGB));
+
+                            // Handle effects safely
+                            if (!images.empty() && layersList->count() > 0) {
+                                Handle_Effects(imageEffects, images, 0);
+                            }
+
+                            // Use correct stride for QImage
+                            qimg = QImage(images.back().data, images.back().width, images.back().height, images.back().width * images.back().channels, QImage::Format_RGB888);
                             std::cout << "testststst";
                             label->setPixmap(QPixmap::fromImage(qimg));
                         }
@@ -63,21 +77,77 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     QVBoxLayout* layout = new QVBoxLayout(sidebarWidget);
 
     // Add button at the top (optional)
-    QPushButton* addButton = new QPushButton("Add Layer");
-    addButton->setMinimumHeight(40);
-    addButton->setStyleSheet("font-size: 18px;");
-    layout->addWidget(addButton);
+    QPushButton* brightnessButton = new QPushButton("bright Layer");
+    brightnessButton->setMinimumHeight(40);
+    brightnessButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(brightnessButton);
 
+    QPushButton* contrastButton = new QPushButton("contrast Layer");
+    contrastButton->setMinimumHeight(40);
+    contrastButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(contrastButton);
     // Effect layers list
-    QListWidget* layersList = new QListWidget;
+    layersList = new QListWidget;
     layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
     layersList->setSelectionMode(QAbstractItemView::SingleSelection);
     layout->addWidget(layersList);
 
     layout->addStretch();
-    connect(addButton, &QPushButton::clicked, this, [layersList]() {
-        layersList->addItem("New Effect Layer");
+
+    connect(brightnessButton, &QPushButton::clicked, this, [this]() {
+        layersList->addItem("Brightness Effect");
+        imageEffects.push_back(
+            ImageEffect(Effect_Type(Brightness), std::vector<float>{1, 2, 3})
+        );
     });
+    connect(contrastButton, &QPushButton::clicked, this, [this]() {
+        layersList->addItem("Contrast Effect");
+        imageEffects.push_back(
+            ImageEffect(Effect_Type(Contrast), std::vector<float>{1, 2, 3})
+        );
+    });
+
+connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
+    [this](const QModelIndex&, int start, int end,
+           const QModelIndex&, int destinationRow) {
+
+        if (start == end) {
+            auto fromIt = std::next(imageEffects.begin(), start);
+            auto toIt   = std::next(imageEffects.begin(), destinationRow);
+
+            if (destinationRow > start)
+                ++toIt;
+            
+            fromIt->changed = true;
+            fromIt->imageCached = false;
+            if (destinationRow > start) {
+                for (auto it = std::next(imageEffects.begin(), start + 1); 
+                     it != imageEffects.end(); ++it) {
+                    it->changed = true;
+                }
+            }
+
+            imageEffects.splice(toIt, imageEffects, fromIt);
+        }
+        Print_Effects(imageEffects);
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+            std::cout << "check im image update" << lastImage.data[1] << "\n";
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
+    });
+
     dock->setWidget(sidebarWidget);
     addDockWidget(Qt::RightDockWidgetArea, dock);
 

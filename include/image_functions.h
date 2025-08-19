@@ -1,21 +1,48 @@
 #pragma once
 #include <vector>
+#include <list>
+#include <string>
 
 enum Image_Type{JPG, BMP, PNG, RAW, CRAW};
 
 
 enum Effect_Type{
+                Crop,
+                RotateClock,
+                RotateCounterClock,
+                FlipX,
+                FlipY,
                 Brightness,
                 Contrast,
                 Saturation,
                 Vibrancy
                 };
 
-struct ImageEffects{
-    std::vector<Effect_Type> effects;
-    std::vector<std::vector<float>> args;
-    std::vector<bool> changed;
-    std::vector<bool> imageCached;
+std::string effectTypeToString(Effect_Type type);
+
+struct ImageEffect{
+    Effect_Type effect;
+    std::vector<float> args;
+    bool changed;
+    bool imageCached;
+    int cacheIndex;
+    ImageEffect(Effect_Type _effect, std::vector<float> _args){
+        effect = _effect;
+        args = _args;
+        changed = true;
+        imageCached = false;
+        cacheIndex = -1;
+    }
+};
+struct Image{
+    unsigned char* data;
+    int width, height, channels;
+    Image(unsigned char* _data, int _width, int _height, int _channels){
+        data = _data;
+        width = _width;
+        height = _height;
+        channels = _channels;
+    }
 };
 
 
@@ -25,8 +52,9 @@ void Export_Image(const unsigned char* __restrict image, int& width, int& height
 
 void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& height, int& channels);
 
-void Adjust_Brightness(unsigned char* __restrict image, int& width, int& height, int& channels, int adjustmeant);
+void Adjust_Brightness(Image image, int adjustmeant);
 
 
-void Handle_Effects(ImageEffects Effects, std::vector<unsigned char*> images, int stopPoint);
+void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);
 
+void Print_Effects(std::list<ImageEffect> effects);

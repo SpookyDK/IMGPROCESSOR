@@ -5,8 +5,17 @@
 #include <stb_image/stb_image_write.h>
 #include <iostream>
 #include <algorithm>
+#include <QImage>
 
-
+std::string effectTypeToString(Effect_Type type) {
+    switch (type) {
+        case Brightness: return "Brightness";
+        case Contrast:   return "Contrast";
+        case Saturation: return "Saturation";
+        case Vibrancy:   return "Vibrancy";
+    }
+    return "Unknown";
+}
 
 unsigned char* Load_Image(const char* filepath, int& width, int& height, int& channels){
 
@@ -43,17 +52,17 @@ void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& h
     }
 }
 
-void Adjust_Brightness(unsigned char* __restrict image, int& width, int& height, int& channels, int adjustmeant){
-        int end = width * height * channels;
+void Adjust_Brightness(Image image, int adjustmeant){
+        int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
-            int value0 = static_cast<int>(image[i]) + adjustmeant;
-            int value1 = static_cast<int>(image[i + 1]) + adjustmeant;
-            int value2 = static_cast<int>(image[i + 2]) + adjustmeant;
-            image[i] = static_cast<char>(std::clamp(value0, 0, 255));
-            image[i + 1] = static_cast<char>(std::clamp(value1, 0, 255));
-            image[i + 2] = static_cast<char>(std::clamp(value2, 0, 255));
-            i += channels;
+            int value0 = static_cast<int>(image.data[i]) + adjustmeant;
+            int value1 = static_cast<int>(image.data[i + 1]) + adjustmeant;
+            int value2 = static_cast<int>(image.data[i + 2]) + adjustmeant;
+            image.data[i] = static_cast<char>(std::clamp(value0, 0, 255));
+            image.data[i + 1] = static_cast<char>(std::clamp(value1, 0, 255));
+            image.data[i + 2] = static_cast<char>(std::clamp(value2, 0, 255));
+            i += image.channels;
         }
         return;
 }
@@ -63,40 +72,81 @@ void Export_Image(const unsigned char* __restrict image, int& width, int& height
 
 }
 
-void Handle_Effects(ImageEffects Effects, std::vector<unsigned char*> images, int stopPoint){
-    int index = 0;
-    int end = Effects.changed.size();
-    int changeIndex = end;
-    bool needsProcessing = false;
-    int lastCache = 0;
-    while (index < end){
-        if (Effects.changed[index] == true){
-            changeIndex = index;
-            needsProcessing = true;
+void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
+    auto iterator = Effects.begin();
+    auto savepoint = Effects.begin();
+    while (iterator != Effects.end()){
+        if (iterator-> changed){
             break;
-        } else if (Effects.imageCached[index]){
-            lastCache = index;
-            }
-        index ++;
-    } 
-    if (needsProcessing){
-        index = lastCache + 1;
-        end = Effects.effects.size();
-        while (index < end){
-            switch(Effects.effects[index]){
+        }
+        if (iterator->imageCached && iterator->cacheIndex >=0 && iterator->cacheIndex < images.size()){
+            savepoint = iterator;
+        }
+        ++iterator;
+    }
+    int itSinceSave = 0;
+    int indexImage = savepoint->cacheIndex;
+    if (indexImage < 0){
+        indexImage = 0;
+    }
+    std::cout << "h"<< images[indexImage].height << "w"<< images[indexImage].width << "c"<< images[indexImage].channels << "\n"; 
+    int imageSize = images[indexImage].height*images[indexImage].width*images[indexImage].channels;
+    std::cout << "size = " << imageSize << "\n";
+//Malloc copy last to temp;
+    unsigned char* copy = new unsigned char[imageSize];
+    std::memcpy(copy, images[indexImage].data, imageSize);
+    Image workingImage(copy, images[indexImage].width, images[indexImage].height, images[indexImage].channels);
+    // Print_Effects(Effects);
+
+    std::cout << "_______________\n";
+    while (savepoint != Effects.end()){
+        switch(savepoint->effect){
             case Brightness :
-                std::cout << "test";
+                std::cout << "adjusting brightness\n";
+                Adjust_Brightness(workingImage, 10);
                 break;
-            case Contrast : 
+            case Contrast :
+                std::cout << "adjusting contrast\n";
+                Adjust_Brightness(workingImage, -15);
                 break;
-            case Saturation :
+            default:
+                std::cout << "default\n";
                 break;
-            case Vibrancy :
-                break;
-            }
-            index ++;
+
+
         }
 
-    }else{return;}
+        if (itSinceSave > 4){
+            unsigned char* copieddata = new unsigned char[imageSize];
+            std::memcpy(copieddata, workingImage.data, imageSize);
+            images.push_back(Image(copieddata, workingImage.width, workingImage.height, workingImage.channels));
+            itSinceSave = 0;
+
+            
+        }
+
+        itSinceSave++;
+        std::cout << "corner value = " << workingImage.data[1] << "\n";
+        savepoint->changed = false;
+        ++savepoint;
+
+    }
+    //Add final image as last;
+    std::cout<< "saving image\n";
+    images.push_back(workingImage);
+}
+
+void Print_Effects(std::list<ImageEffect> effects){
+    for (auto &effect : effects) {
+            std::cout << effectTypeToString(effect.effect)
+                      << " | changed: " << effect.changed
+                      << " | cached: " << effect.imageCached
+                      << " | args: ";
+            for (auto arg : effect.args) {
+                std::cout << arg << " ";
+            }
+            std::cout << "\n";
+        }
 
 }
+
