@@ -26,33 +26,33 @@ unsigned char* Load_Image(const char* filepath, int& width, int& height, int& ch
     return data;
 }
 
-void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& height, int& channels){
-    if (image){
-        unsigned char* __restrict rotated = (unsigned char*) malloc(width * height * channels);
+void Rotate_Image_90_Counter(Image& image){
+    if (image.data){
+        unsigned char* __restrict rotated = (unsigned char*) malloc(image.width * image.height * image.channels);
         int y = 0;
-        while (y < height){
+        while (y < image.height){
             int x = 0;
-            while (x < width){
-                rotated[( (width - 1 - x) * height + y ) * channels] = image[(y * width + x) * channels];
-                rotated[( (width - 1 - x) * height + y ) * channels + 1] = image[(y * width + x) * channels + 1];
-                rotated[( (width - 1 - x) * height + y ) * channels + 2] = image[(y * width + x) * channels + 2];
+            while (x < image.width){
+                rotated[( (image.width - 1 - x) * image.height + y ) * image.channels] = image.data[(y * image.width + x) * image.channels];
+                rotated[( (image.width - 1 - x) * image.height + y ) * image.channels + 1] = image.data[(y * image.width + x) * image.channels + 1];
+                rotated[( (image.width - 1 - x) * image.height + y ) * image.channels + 2] = image.data[(y * image.width + x) * image.channels + 2];
                 x++;
             }
             y++;
         }
-        std::swap(width,height);
+        std::swap(image.width,image.height);
         int i = 0;
-        while (i < width*height*channels){
-            image[i] = rotated[i];
-            image[i+1] = rotated[i+1];
-            image[i+2] = rotated[i+2];
-            i += channels;
+        while (i < image.width*image.height*image.channels){
+            image.data[i] = rotated[i];
+            image.data[i+1] = rotated[i+1];
+            image.data[i+2] = rotated[i+2];
+            i += image.channels;
 
         }
     }
 }
 
-void Adjust_Brightness(Image image, int adjustmeant){
+void Adjust_Brightness(Image& image, int adjustmeant){
         int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
@@ -75,6 +75,7 @@ void Export_Image(const unsigned char* __restrict image, int& width, int& height
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
     auto iterator = Effects.begin();
     auto savepoint = Effects.begin();
+    if (images.size() > 0){
     while (iterator != Effects.end()){
         if (iterator-> changed){
             break;
@@ -92,7 +93,7 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
     std::cout << "h"<< images[indexImage].height << "w"<< images[indexImage].width << "c"<< images[indexImage].channels << "\n"; 
     int imageSize = images[indexImage].height*images[indexImage].width*images[indexImage].channels;
     std::cout << "size = " << imageSize << "\n";
-//Malloc copy last to temp;
+    //Malloc copy last to temp;
     unsigned char* copy = new unsigned char[imageSize];
     std::memcpy(copy, images[indexImage].data, imageSize);
     Image workingImage(copy, images[indexImage].width, images[indexImage].height, images[indexImage].channels);
@@ -109,6 +110,10 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
                 std::cout << "adjusting contrast\n";
                 Adjust_Brightness(workingImage, -15);
                 break;
+            case RotateCounterClock:
+                std::cout << "rotating\n";
+                Rotate_Image_90_Counter(workingImage);
+                break;
             default:
                 std::cout << "default\n";
                 break;
@@ -117,9 +122,12 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         }
 
         if (itSinceSave > 4){
+            std::cout << "saving cache";
             unsigned char* copieddata = new unsigned char[imageSize];
             std::memcpy(copieddata, workingImage.data, imageSize);
             images.push_back(Image(copieddata, workingImage.width, workingImage.height, workingImage.channels));
+            savepoint->cacheIndex = images.size()-1;
+            savepoint->imageCached = true;
             itSinceSave = 0;
 
             
@@ -131,9 +139,14 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         ++savepoint;
 
     }
+    if (images.size() == 1){
+        images.push_back(workingImage);
+    }else{
+        images.back() = workingImage;
+    }
     //Add final image as last;
-    std::cout<< "saving image\n";
-    images.push_back(workingImage);
+    std::cout<< "saving image, total images cached =  "<< images.size() << "\n";
+    }
 }
 
 void Print_Effects(std::list<ImageEffect> effects){

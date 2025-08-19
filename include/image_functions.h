@@ -50,9 +50,9 @@ unsigned char* Load_Image(const char* filepath, int& width, int& height, int& ch
 
 void Export_Image(const unsigned char* __restrict image, int& width, int& height, int&channels, const char* filepath);
 
-void Rotate_Image_90_Counter(unsigned char* __restrict image, int& width, int& height, int& channels);
+void Rotate_Image_90_Counter(Image& image);
 
-void Adjust_Brightness(Image image, int adjustmeant);
+void Adjust_Brightness(Image& image, int adjustmeant);
 
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);

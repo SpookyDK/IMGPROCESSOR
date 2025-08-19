@@ -86,6 +86,11 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     contrastButton->setMinimumHeight(40);
     contrastButton->setStyleSheet("font-size: 18px;");
     layout->addWidget(contrastButton);
+
+    QPushButton* rotateCButton = new QPushButton("Rotate Layer");
+    contrastButton->setMinimumHeight(40);
+    contrastButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(rotateCButton);
     // Effect layers list
     layersList = new QListWidget;
     layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
@@ -99,14 +104,68 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         imageEffects.push_back(
             ImageEffect(Effect_Type(Brightness), std::vector<float>{1, 2, 3})
         );
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+            std::cout << "check im image update" << lastImage.data[1] << "\n";
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
     });
     connect(contrastButton, &QPushButton::clicked, this, [this]() {
         layersList->addItem("Contrast Effect");
         imageEffects.push_back(
             ImageEffect(Effect_Type(Contrast), std::vector<float>{1, 2, 3})
         );
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+            std::cout << "check im image update" << lastImage.data[1] << "\n";
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
     });
 
+    connect(rotateCButton, &QPushButton::clicked, this, [this]() {
+        layersList->addItem("Rotate Counter");
+        imageEffects.push_back(
+            ImageEffect(Effect_Type(RotateCounterClock), std::vector<float>{1, 2, 3})
+        );
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+            std::cout << "check im image update" << lastImage.data[1] << "\n";
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
+    });
 connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
     [this](const QModelIndex&, int start, int end,
            const QModelIndex&, int destinationRow) {
