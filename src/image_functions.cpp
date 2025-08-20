@@ -128,7 +128,7 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         switch(savepoint->effect){
             case Brightness :
                 std::cout << "\nADJUSTING BRIGHTNESS\n";
-                Adjust_Brightness(workingImage, 10);
+                Adjust_Brightness(workingImage, savepoint->args[0]);
                 break;
             case Contrast :
                 std::cout << "\nADJUSTING CONTRAST\n";

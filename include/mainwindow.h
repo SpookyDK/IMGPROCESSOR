@@ -24,6 +24,7 @@ class MyMainWindow : public QMainWindow{
         QWidget* editorWidget;
         QVBoxLayout* editorLayout;
 
-        void Set_Editor_Effect(ImageEffect effect);
+        void Set_Editor_Effect(ImageEffect& effect);
+        void Update_Image();
 
 };

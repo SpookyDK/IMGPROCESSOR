@@ -288,7 +288,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
 
 
 
-void MyMainWindow::Set_Editor_Effect(ImageEffect effect){
+void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
 
         qDebug() << "called";
         QLayoutItem* child;
@@ -307,8 +307,30 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect effect){
                 break;
             case FlipY :
                 break;
-            case Brightness :
-                break;
+            case Brightness :{
+                    QLabel* label = new QLabel("Brightness:");
+                            QSlider* slider = new QSlider(Qt::Horizontal);
+                            slider->setRange(-100, 100);
+                            slider->setValue(static_cast<int>(effect.args[0]));
+                            editorLayout->addWidget(label);
+                            editorLayout->addWidget(slider);
+
+                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider]() {
+                                int value = slider->value();
+                                qDebug() << "changed\n";
+                                qDebug() << "test = " << effect.args.size() << "\n";
+
+                                if (effect.args.size() > 0) {
+                                    effect.args[0] = static_cast<float>(value);
+                                } else {
+                                    qDebug() << "Error: effect has no args!";
+                                }
+                                effect.changed = true;
+                                effect.imageCached = false;
+                                Handle_Effects(imageEffects, images, 0);
+                                Update_Image();
+                            });
+                break;}
             case Contrast :
                 break;
             case Saturation :
@@ -318,4 +340,22 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect effect){
         }
 }
 
+    void MyMainWindow::Update_Image(){
+        if (images.size() > 0){
+            Image& lastImage = images.back();
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }else{
+            qDebug() << "MyMainWindow::Update_Image()__no images to update\n";
+        }
+    }
 
