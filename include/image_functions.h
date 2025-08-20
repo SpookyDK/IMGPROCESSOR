@@ -31,7 +31,7 @@ struct ImageEffect{
         args = _args;
         changed = true;
         imageCached = false;
-        cacheIndex = -1;
+        cacheIndex = 0;
     }
 };
 struct Image{

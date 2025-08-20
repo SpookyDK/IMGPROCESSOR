@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <QImage>
+#include <chrono>
 
 std::string effectTypeToString(Effect_Type type) {
     switch (type) {
@@ -73,6 +74,9 @@ void Adjust_Brightness(Image& image, int adjustmeant){
 
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
+
+    std::cout << "__________________\n";
+    auto timeStartHandleEffects = std::chrono::high_resolution_clock::now();
     auto iterator = Effects.begin();
     auto savepoint = Effects.begin();
     if (images.size() > 0){
@@ -80,49 +84,75 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         if (iterator-> changed){
             break;
         }
-        if (iterator->imageCached && iterator->cacheIndex >=0 && iterator->cacheIndex < images.size()){
+        if (iterator->imageCached && iterator->cacheIndex > 0 && iterator->cacheIndex < images.size()){
             savepoint = iterator;
         }
         ++iterator;
     }
     int itSinceSave = 0;
     int indexImage = savepoint->cacheIndex;
-    if (indexImage < 0){
-        indexImage = 0;
+    std::cout << "CACHE INDEX = " << indexImage << "\n";
+    if (indexImage == 0){
+        std::cout << "RESETING CACHE\n";
+        int i = 1;
+        while (i < images.size() -1){
+            delete[] images[i].data;
+            i++;
+        }
+        images.erase(images.begin() +1, images.end()); 
+        std::cout << "NEW CACHE SIZE = " << images.size() << "\n";
+
+    }else if (indexImage != images.size()-1){
+        std::cout << "MINIMIZING CACHE\n" << images.size();
+        int i = indexImage + 1;
+        while (i < images.size() -1){
+            delete[] images[i].data;
+            i++;
+        }
+        images.erase(images.begin() + indexImage, images.end()); 
+        std::cout << "NEW CACHE SIZE = " << images.size() << "\n";
     }
-    std::cout << "h"<< images[indexImage].height << "w"<< images[indexImage].width << "c"<< images[indexImage].channels << "\n"; 
+    auto timeEndHandleEffects = std::chrono::high_resolution_clock::now();
+    int timeHandleEffects = std::chrono::duration_cast<std::chrono::milliseconds>(timeEndHandleEffects - timeStartHandleEffects).count();
+    std::cout << "TIME FOR EFFECT LIST = " << timeHandleEffects << "ms\n";
     int imageSize = images[indexImage].height*images[indexImage].width*images[indexImage].channels;
-    std::cout << "size = " << imageSize << "\n";
     //Malloc copy last to temp;
     unsigned char* copy = new unsigned char[imageSize];
     std::memcpy(copy, images[indexImage].data, imageSize);
     Image workingImage(copy, images[indexImage].width, images[indexImage].height, images[indexImage].channels);
     // Print_Effects(Effects);
-
-    std::cout << "_______________\n";
+    auto timeSwitchStart = std::chrono::high_resolution_clock::now();
+    auto timeSwitchEnd = std::chrono::high_resolution_clock::now();
     while (savepoint != Effects.end()){
+        timeSwitchStart = std::chrono::high_resolution_clock::now();
         switch(savepoint->effect){
             case Brightness :
-                std::cout << "adjusting brightness\n";
+                std::cout << "\nADJUSTING BRIGHTNESS\n";
                 Adjust_Brightness(workingImage, 10);
                 break;
             case Contrast :
-                std::cout << "adjusting contrast\n";
+                std::cout << "\nADJUSTING CONTRAST\n";
                 Adjust_Brightness(workingImage, -15);
                 break;
             case RotateCounterClock:
-                std::cout << "rotating\n";
+                std::cout << "\nROTATION 90 COUNTER\n";
                 Rotate_Image_90_Counter(workingImage);
                 break;
             default:
-                std::cout << "default\n";
+                std::cout << "\nDEFAULT\n";
                 break;
-
-
         }
+        auto timeSwitchEnd = std::chrono::high_resolution_clock::now();
+        int switchTime = std::chrono::duration_cast<std::chrono::milliseconds>(timeSwitchEnd - timeSwitchStart).count();
+        std::cout << "TIME FOR EFFECT = " << switchTime << "ms\n";
+        std::cout << "PIXEL PR MS = " << imageSize / switchTime << "\n";
+        std::cout << "IT SINCE SAVE = " << itSinceSave << "\n\n";
 
-        if (itSinceSave > 4){
-            std::cout << "saving cache";
+        
+
+
+        if (itSinceSave > 2){
+            std::cout << "SAVING CACHE....\n";
             unsigned char* copieddata = new unsigned char[imageSize];
             std::memcpy(copieddata, workingImage.data, imageSize);
             images.push_back(Image(copieddata, workingImage.width, workingImage.height, workingImage.channels));
@@ -134,7 +164,6 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         }
 
         itSinceSave++;
-        std::cout << "corner value = " << workingImage.data[1] << "\n";
         savepoint->changed = false;
         ++savepoint;
 
@@ -145,7 +174,10 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         images.back() = workingImage;
     }
     //Add final image as last;
-    std::cout<< "saving image, total images cached =  "<< images.size() << "\n";
+    std::cout<< "TOTAL IMAGES CACHED=  "<< images.size() << "\n";
+
+    auto timeEndEffects = std::chrono::high_resolution_clock::now();
+    std::cout << "TOTAL PROCESSING TIME = " << timeEndEffects - timeStartHandleEffects << "\n";
     }
 }
 

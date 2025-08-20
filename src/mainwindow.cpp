@@ -57,7 +57,6 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
 
                             // Use correct stride for QImage
                             qimg = QImage(images.back().data, images.back().width, images.back().height, images.back().width * images.back().channels, QImage::Format_RGB888);
-                            std::cout << "testststst";
                             label->setPixmap(QPixmap::fromImage(qimg));
                         }
                     }
@@ -122,6 +121,8 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         // This item is now selected automatically by default
         auto iterator = imageEffects.begin();
         std::advance(iterator, layersList->row(item));
+        qDebug() << "called";
+        Set_Editor_Effect(*iterator);
         });
 
     connect(brightnessButton, &QPushButton::clicked, this, [this]() {
@@ -132,7 +133,6 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-            std::cout << "check im image update" << lastImage.data[1] << "\n";
 
             qimg = QImage(
                 lastImage.data,
@@ -154,7 +154,6 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-            std::cout << "check im image update" << lastImage.data[1] << "\n";
 
             qimg = QImage(
                 lastImage.data,
@@ -170,14 +169,13 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     });
 
     connect(rotateCButton, &QPushButton::clicked, this, [this]() {
-        layersList->addItem("Rotate Counter");
-        imageEffects.push_back(
+        layersList->insertItem(0,"Rotate Counter");
+        imageEffects.push_front(
             ImageEffect(Effect_Type(RotateCounterClock), std::vector<float>{1, 2, 3})
         );
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-            std::cout << "check im image update" << lastImage.data[1] << "\n";
 
             qimg = QImage(
                 lastImage.data,
@@ -212,7 +210,6 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-            std::cout << "check im image update" << lastImage.data[1] << "\n";
 
             qimg = QImage(
                 lastImage.data,
@@ -254,7 +251,6 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
             if (images.size() > 0 && layersList) {
                 Handle_Effects(imageEffects, images, 0);
                 Image& lastImage = images.back();
-                std::cout << "check im image update" << lastImage.data[1] << "\n";
 
                 qimg = QImage(
                     lastImage.data,
@@ -273,6 +269,53 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     dock->setWidget(sidebarWidget);
     addDockWidget(Qt::RightDockWidgetArea, dock);
 
+    editorDock = new QDockWidget("Effect Editor", this);
+    editorDock->setFeatures(QDockWidget::DockWidgetMovable);
+
+    editorWidget = new QWidget;
+    editorLayout = new QVBoxLayout(editorWidget);
+    editorLayout->addStretch();
+
+    editorWidget->setLayout(editorLayout);
+    editorDock->setWidget(editorWidget);
+
+    // Dock it bottom-left
+    addDockWidget(Qt::LeftDockWidgetArea, editorDock);
+
+}
+
+
+
+
+
+void MyMainWindow::Set_Editor_Effect(ImageEffect effect){
+
+        qDebug() << "called";
+        QLayoutItem* child;
+        while ((child = editorLayout->takeAt(0)) != nullptr) {
+            delete child->widget();
+            delete child;
+        }
+        switch (effect.effect){
+            case Crop : 
+                break;
+            case RotateClock : 
+                break;
+            case RotateCounterClock :
+                break;
+            case FlipX :
+                break;
+            case FlipY :
+                break;
+            case Brightness :
+                break;
+            case Contrast :
+                break;
+            case Saturation :
+                break;
+            case Vibrancy : 
+                break;
+        }
 }
 
 
