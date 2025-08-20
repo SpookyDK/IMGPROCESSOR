@@ -26,6 +26,10 @@ unsigned char* Load_Image(const char* filepath, int& width, int& height, int& ch
     return data;
 }
 
+void Export_Image(Image image, const char* filepath){
+    stbi_write_jpg(filepath, image.width, image.height, image.channels, image.data, 0);
+}
+
 void Rotate_Image_90_Counter(Image& image){
     if (image.data){
         unsigned char* __restrict rotated = (unsigned char*) malloc(image.width * image.height * image.channels);
@@ -67,10 +71,6 @@ void Adjust_Brightness(Image& image, int adjustmeant){
         return;
 }
 
-void Export_Image(const unsigned char* __restrict image, int& width, int& height, int&channels, const char* filepath){
-    stbi_write_jpg(filepath, width, height, channels, image, 0);
-
-}
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
     auto iterator = Effects.begin();

@@ -48,7 +48,7 @@ struct Image{
 
 unsigned char* Load_Image(const char* filepath, int& width, int& height, int& channels);
 
-void Export_Image(const unsigned char* __restrict image, int& width, int& height, int&channels, const char* filepath);
+void Export_Image(Image image, const char* filepath);
 
 void Rotate_Image_90_Counter(Image& image);
 

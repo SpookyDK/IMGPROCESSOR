@@ -1,7 +1,7 @@
 [
   {
     "arguments": [
-      "/sbin/c++",
+      "/usr/sbin/c++",
       "-DQT_CORE_LIB",
       "-DQT_GUI_LIB",
       "-DQT_NO_DEBUG",
@@ -29,11 +29,11 @@
       "-I",
       "/opt/cuda/include",
       "-o",
-      "CMakeFiles/MyExecutable.dir/src/image_functions.cpp.o",
-      "/home/esben/programming/IMGPROCESSOR/src/image_functions.cpp"
+      "CMakeFiles/MyExecutable.dir/src/mainwindow.cpp.o",
+      "/home/esben/programming/IMGPROCESSOR/src/mainwindow.cpp"
     ],
     "directory": "/home/esben/programming/IMGPROCESSOR/build",
-    "file": "/home/esben/programming/IMGPROCESSOR/src/image_functions.cpp",
-    "output": "/home/esben/programming/IMGPROCESSOR/build/CMakeFiles/MyExecutable.dir/src/image_functions.cpp.o"
+    "file": "/home/esben/programming/IMGPROCESSOR/src/mainwindow.cpp",
+    "output": "/home/esben/programming/IMGPROCESSOR/build/CMakeFiles/MyExecutable.dir/src/mainwindow.cpp.o"
   }
 ]

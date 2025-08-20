@@ -63,6 +63,17 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                     }
             });
     toolbar-> addAction(openFileAction);
+
+
+    QAction* saveFileAction = new QAction("Save File", this);
+    connect(saveFileAction, &QAction::triggered,this, [this](){
+        QString fileName = QFileDialog::getSaveFileName(this, "Set localtion File", QString(), "Images (*.jpg)");
+        if (!fileName.isEmpty()) {
+            QByteArray byteArray = fileName.toUtf8();
+            Export_Image(images.back(), byteArray.constData());
+        }
+    });
+    toolbar-> addAction(saveFileAction);
     toolbar->setIconSize(QSize(32,32));
     addToolBar(toolbar);
     // QDockWidget* dock = new QDockWidget("Sidebar", this);
@@ -98,6 +109,13 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     layout->addWidget(layersList);
 
     layout->addStretch();
+
+    layersList->setSelectionMode(QAbstractItemView::SingleSelection);
+    connect(layersList, &QListWidget::itemClicked, this, [this](QListWidgetItem* item){
+        // This item is now selected automatically by default
+        auto iterator = imageEffects.begin();
+        std::advance(iterator, layersList->row(item));
+        });
 
     connect(brightnessButton, &QPushButton::clicked, this, [this]() {
         layersList->addItem("Brightness Effect");
@@ -206,6 +224,7 @@ connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
             label->update();
         }
     });
+
 
     dock->setWidget(sidebarWidget);
     addDockWidget(Qt::RightDockWidgetArea, dock);
