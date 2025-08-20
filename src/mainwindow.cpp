@@ -102,6 +102,13 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     contrastButton->setMinimumHeight(40);
     contrastButton->setStyleSheet("font-size: 18px;");
     layout->addWidget(rotateCButton);
+
+
+    QPushButton* deleteButton = new QPushButton("Delete layer");
+    deleteButton->setMinimumHeight(40);
+    deleteButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(deleteButton);
+
     // Effect layers list
     layersList = new QListWidget;
     layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
@@ -184,29 +191,24 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
             label->update();
         }
     });
-connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
-    [this](const QModelIndex&, int start, int end,
-           const QModelIndex&, int destinationRow) {
+    connect(deleteButton, &QPushButton::clicked, this, [this]() {
+        QListWidgetItem *selectedItem = layersList->currentItem();
+        if (selectedItem) {
+            // Get index of selected item
+            int index = layersList->row(selectedItem);
 
-        if (start == end) {
-            auto fromIt = std::next(imageEffects.begin(), start);
-            auto toIt   = std::next(imageEffects.begin(), destinationRow);
+            // Remove item from QListWidget
+            delete layersList->takeItem(index);
 
-            if (destinationRow > start)
-                ++toIt;
-            
-            fromIt->changed = true;
-            fromIt->imageCached = false;
-            if (destinationRow > start) {
-                for (auto it = std::next(imageEffects.begin(), start + 1); 
-                     it != imageEffects.end(); ++it) {
-                    it->changed = true;
-                }
+            // Remove corresponding element from std::list
+            auto it = imageEffects.begin();
+            std::advance(it, index); // move iterator to the correct position
+            if (it != imageEffects.end()) {
+                it = imageEffects.erase(it);
+                it->changed = true;
+                it->imageCached = false;
             }
 
-            imageEffects.splice(toIt, imageEffects, fromIt);
-        }
-        Print_Effects(imageEffects);
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
@@ -223,7 +225,49 @@ connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
         }
+        }
     });
+
+    connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
+        [this](const QModelIndex&, int start, int end,
+               const QModelIndex&, int destinationRow) {
+
+            if (start == end) {
+                auto fromIt = std::next(imageEffects.begin(), start);
+                auto toIt   = std::next(imageEffects.begin(), destinationRow);
+
+                if (destinationRow > start)
+                    ++toIt;
+                
+                fromIt->changed = true;
+                fromIt->imageCached = false;
+                if (destinationRow > start) {
+                    for (auto it = std::next(imageEffects.begin(), start + 1); 
+                         it != imageEffects.end(); ++it) {
+                        it->changed = true;
+                    }
+                }
+
+                imageEffects.splice(toIt, imageEffects, fromIt);
+            }
+            Print_Effects(imageEffects);
+            if (images.size() > 0 && layersList) {
+                Handle_Effects(imageEffects, images, 0);
+                Image& lastImage = images.back();
+                std::cout << "check im image update" << lastImage.data[1] << "\n";
+
+                qimg = QImage(
+                    lastImage.data,
+                    lastImage.width,
+                    lastImage.height,
+                    lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                    QImage::Format_RGB888
+                );
+                qimg = qimg.copy();
+                label->setPixmap(QPixmap::fromImage(qimg));
+                label->update();
+            }
+        });
 
 
     dock->setWidget(sidebarWidget);
