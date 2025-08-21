@@ -54,7 +54,9 @@ void Rotate_Image_90_Counter(Image& image){
             i += image.channels;
 
         }
+        delete[] rotated;
     }
+
 }
 
 void Adjust_Brightness(Image& image, int adjustmeant){
@@ -88,6 +90,85 @@ void Adjust_Contrast(Image& image, float adjustmeant){
         return;
 }
 
+void Scale_Image(Image& image, int outputWidth, int outputHeight) {
+    // allocate new buffer
+    unsigned char* scaled = (unsigned char*) malloc(outputWidth * outputHeight * 3);
+
+    float xRatio = (outputWidth > 1) ? (float)(image.width  - 1) / (outputWidth  - 1) : 0.0f;
+    float yRatio = (outputHeight > 1)? (float)(image.height - 1) / (outputHeight - 1): 0.0f;
+
+    for (int i = 0; i < outputHeight; i++) {
+        for (int j = 0; j < outputWidth; j++) {
+            int xl = (int)floor(xRatio * j);
+            int yl = (int)floor(yRatio * i);
+            int xh = std::min(xl + 1, image.width  - 1);
+            int yh = std::min(yl + 1, image.height - 1);
+
+            float x_weight = (xRatio * j) - xl;
+            float y_weight = (yRatio * i) - yl;
+
+            // base indices for the four neighbors
+            int idx_a = (yl * image.width + xl) * 3;
+            int idx_b = (yl * image.width + xh) * 3;
+            int idx_c = (yh * image.width + xl) * 3;
+            int idx_d = (yh * image.width + xh) * 3;
+
+            // output index
+            int outIdx = (i * outputWidth + j) * 3;
+
+            // ----- Red channel -----
+            {
+                float a = image.data[idx_a + 0];
+                float b = image.data[idx_b + 0];
+                float c = image.data[idx_c + 0];
+                float d = image.data[idx_d + 0];
+
+                float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                              b * x_weight * (1 - y_weight) +
+                              c * (1 - x_weight) * y_weight +
+                              d * x_weight * y_weight;
+
+                scaled[outIdx + 0] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+            }
+
+            // ----- Green channel -----
+            {
+                float a = image.data[idx_a + 1];
+                float b = image.data[idx_b + 1];
+                float c = image.data[idx_c + 1];
+                float d = image.data[idx_d + 1];
+
+                float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                              b * x_weight * (1 - y_weight) +
+                              c * (1 - x_weight) * y_weight +
+                              d * x_weight * y_weight;
+
+                scaled[outIdx + 1] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+            }
+
+            // ----- Blue channel -----
+            {
+                float a = image.data[idx_a + 2];
+                float b = image.data[idx_b + 2];
+                float c = image.data[idx_c + 2];
+                float d = image.data[idx_d + 2];
+
+                float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                              b * x_weight * (1 - y_weight) +
+                              c * (1 - x_weight) * y_weight +
+                              d * x_weight * y_weight;
+
+                scaled[outIdx + 2] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+            }
+        }
+    }
+
+    free(image.data);  // original was malloc'ed
+    image.data = scaled;
+    image.width = outputWidth;
+    image.height = outputHeight;
+    image.channels = 3; // enforce
+}
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
 
@@ -154,6 +235,9 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
                 std::cout << "\nROTATION 90 COUNTER\n";
                 Rotate_Image_90_Counter(workingImage);
                 break;
+            case Scale :
+                std::cout << "\nSCALING IMAGE\n";
+                Scale_Image(workingImage, workingImage.width/8, workingImage.height/8);
             default:
                 std::cout << "\nDEFAULT\n";
                 break;

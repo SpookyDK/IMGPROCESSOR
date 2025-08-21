@@ -8,6 +8,7 @@ enum Image_Type{JPG, BMP, PNG, RAW, CRAW};
 
 enum Effect_Type{
                 Crop,
+                Scale,
                 RotateClock,
                 RotateCounterClock,
                 FlipX,
@@ -55,6 +56,7 @@ void Rotate_Image_90_Counter(Image& image);
 void Adjust_Brightness(Image& image, int adjustmeant);
 void Adjust_Contrast(Image& image, float adjustmeant);
 
+void Scale_Image(Image& image, float outputWidth, float outputHeight);
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);
 

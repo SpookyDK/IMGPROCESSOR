@@ -108,6 +108,11 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     deleteButton->setStyleSheet("font-size: 18px;");
     layout->addWidget(deleteButton);
 
+
+    QPushButton* scaleButton = new QPushButton("Scale layer");
+    deleteButton->setMinimumHeight(40);
+    deleteButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(scaleButton);
     // Effect layers list
     layersList = new QListWidget;
     layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
@@ -168,6 +173,27 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         }
     });
 
+    connect(scaleButton, &QPushButton::clicked, this, [this]() {
+        layersList->addItem("Scale Effect");
+        imageEffects.push_back(
+            ImageEffect(Effect_Type(Scale), std::vector<float>{1, 2, 3})
+        );
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
+    });
     connect(rotateCButton, &QPushButton::clicked, this, [this]() {
         layersList->insertItem(0,"Rotate Counter");
         imageEffects.push_front(
