@@ -64,9 +64,25 @@ void Adjust_Brightness(Image& image, int adjustmeant){
             int value0 = static_cast<int>(image.data[i]) + adjustmeant;
             int value1 = static_cast<int>(image.data[i + 1]) + adjustmeant;
             int value2 = static_cast<int>(image.data[i + 2]) + adjustmeant;
-            image.data[i] = static_cast<char>(std::clamp(value0, 0, 255));
-            image.data[i + 1] = static_cast<char>(std::clamp(value1, 0, 255));
-            image.data[i + 2] = static_cast<char>(std::clamp(value2, 0, 255));
+            image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
+            image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
+            image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
+            i += image.channels;
+        }
+        return;
+}
+
+
+void Adjust_Contrast(Image& image, float adjustmeant){
+        int end = image.width * image.height * image.channels;
+        int i = 0;
+        while (i < end){
+            int value0 = static_cast<int>( (((float)image.data[i]) - 128) * adjustmeant +128);
+            int value1 = static_cast<int>( (((float)image.data[i+1]) - 128) * adjustmeant +128);
+            int value2 = static_cast<int>( (((float)image.data[i+2]) - 128) * adjustmeant +128);
+            image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
+            image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
+            image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
             i += image.channels;
         }
         return;
@@ -132,7 +148,7 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
                 break;
             case Contrast :
                 std::cout << "\nADJUSTING CONTRAST\n";
-                Adjust_Brightness(workingImage, -15);
+                Adjust_Contrast(workingImage, savepoint->args[0]);
                 break;
             case RotateCounterClock:
                 std::cout << "\nROTATION 90 COUNTER\n";

@@ -273,10 +273,8 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     editorDock->setFeatures(QDockWidget::DockWidgetMovable);
 
     editorWidget = new QWidget;
-    editorLayout = new QVBoxLayout(editorWidget);
-    editorLayout->addStretch();
-
-    editorWidget->setLayout(editorLayout);
+    editorLayout = new QVBoxLayout();        // don’t pass editorWidget here
+    editorWidget->setLayout(editorLayout);   // set it explicitly
     editorDock->setWidget(editorWidget);
 
     // Dock it bottom-left
@@ -312,9 +310,9 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                             QSlider* slider = new QSlider(Qt::Horizontal);
                             slider->setRange(-100, 100);
                             slider->setValue(static_cast<int>(effect.args[0]));
-                            editorLayout->addWidget(label);
-                            editorLayout->addWidget(slider);
-
+                            editorLayout->addWidget(label,0,Qt::AlignTop);
+                            editorLayout->addWidget(slider,0,Qt::AlignTop);
+                            editorLayout->addStretch();
                             connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider]() {
                                 int value = slider->value();
                                 qDebug() << "changed\n";
@@ -331,8 +329,31 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                                 Update_Image();
                             });
                 break;}
-            case Contrast :
+            case Contrast :{
+                             QLabel* label = new QLabel("Contrast:");
+                             QSlider* slider = new QSlider(Qt::Horizontal);
+                             slider->setRange(0, 300);
+                             slider->setValue(100);
+                             editorLayout->addWidget(label,0,Qt::AlignTop);
+                             editorLayout->addWidget(slider,0,Qt::AlignTop);
+                             editorLayout->addStretch();
+                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider]() {
+                                float value = (float)slider->value() / 100.0;
+                                qDebug() << "changed\n";
+                                qDebug() << "test = " << effect.args.size() << "\n";
+
+                                if (effect.args.size() > 0) {
+                                    effect.args[0] = static_cast<float>(value);
+                                } else {
+                                    qDebug() << "Error: effect has no args!";
+                                }
+                                effect.changed = true;
+                                effect.imageCached = false;
+                                Handle_Effects(imageEffects, images, 0);
+                                Update_Image();
+                            });
                 break;
+                           }
             case Saturation :
                 break;
             case Vibrancy : 

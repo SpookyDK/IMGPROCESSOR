@@ -53,6 +53,7 @@ void Export_Image(Image image, const char* filepath);
 void Rotate_Image_90_Counter(Image& image);
 
 void Adjust_Brightness(Image& image, int adjustmeant);
+void Adjust_Contrast(Image& image, float adjustmeant);
 
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);
