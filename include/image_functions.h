@@ -56,7 +56,7 @@ void Rotate_Image_90_Counter(Image& image);
 void Adjust_Brightness(Image& image, int adjustmeant);
 void Adjust_Contrast(Image& image, float adjustmeant);
 
-void Scale_Image(Image& image, float outputWidth, float outputHeight);
+void Scale_Image(Image& image, int outputWidth, int outputHeight);
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);
 

@@ -237,7 +237,7 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
                 break;
             case Scale :
                 std::cout << "\nSCALING IMAGE\n";
-                Scale_Image(workingImage, workingImage.width/8, workingImage.height/8);
+                Scale_Image(workingImage, static_cast<int>(savepoint->args[0]), static_cast<int>(savepoint->args[1]));
             default:
                 std::cout << "\nDEFAULT\n";
                 break;

@@ -32,7 +32,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
 
     QToolBar* toolbar = new QToolBar("Main Toolbar", this);
     QAction* openFileAction = new QAction("Open File", this);
-    connect(openFileAction, &QAction::triggered,this, [this](){
+    connect(openFileAction, &QAction::triggered,this, [this,w,h](){
             QString fileName = QFileDialog::getOpenFileName(this, "Open Image File", QString(), "Images (*.jpg)");
             if (!fileName.isEmpty()) {
                         QPixmap pix(fileName);
@@ -49,6 +49,20 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                             const int channelsRGB = 3;
 
                             images.push_back(Image(data, width, height, channelsRGB));
+                            if (imageEffects.empty()){
+                                float displayRatio = (float)w / (float)h;
+                                float imageRatio = (float)width / (float)height;
+                                std::cout << "windows w:h = " << w << ":" << h << "\n";
+                                if (displayRatio >= imageRatio){
+                                    imageEffects.push_back(ImageEffect(Scale, std::vector<float>{(float)h*imageRatio,(float)h}));
+                                    std::cout << "output w:h = " << h*imageRatio << ":" << h << "\n";
+                                }else{
+                                    imageEffects.push_back(ImageEffect(Scale, std::vector<float>{(float)w,(float)w/imageRatio}));
+                                    std::cout << "output w:h = " << w << ":" << w*imageRatio << "\n";
+                                }
+                                layersList->addItem("Scale");
+
+                            }
 
                             // Handle effects safely
                             if (!images.empty() && layersList->count() > 0) {
@@ -195,10 +209,18 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         }
     });
     connect(rotateCButton, &QPushButton::clicked, this, [this]() {
+        if (imageEffects.begin()->effect == Scale){
+            layersList->insertItem(1,"Rotate Counter");
+            auto itterator = imageEffects.begin();
+            std::cout << "it works\n";
+            ++itterator;
+            imageEffects.insert(itterator, ImageEffect(Effect_Type(RotateCounterClock), std::vector<float>{1, 2, 3}));
+
+        }else{
         layersList->insertItem(0,"Rotate Counter");
         imageEffects.push_front(
             ImageEffect(Effect_Type(RotateCounterClock), std::vector<float>{1, 2, 3})
-        );
+        );}
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
@@ -302,6 +324,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     editorLayout = new QVBoxLayout();        // don’t pass editorWidget here
     editorWidget->setLayout(editorLayout);   // set it explicitly
     editorDock->setWidget(editorWidget);
+    editorWidget->setFixedWidth(screenGeometry.width()*0.1);
 
     // Dock it bottom-left
     addDockWidget(Qt::LeftDockWidgetArea, editorDock);
