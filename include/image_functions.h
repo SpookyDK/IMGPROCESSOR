@@ -9,6 +9,7 @@ enum Image_Type{JPG, BMP, PNG, RAW, CRAW};
 enum Effect_Type{
                 Crop,
                 Scale,
+                Temperature,
                 RotateClock,
                 RotateCounterClock,
                 FlipX,
@@ -53,8 +54,9 @@ void Export_Image(Image image, const char* filepath);
 
 void Rotate_Image_90_Counter(Image& image);
 
-void Adjust_Brightness(Image& image, int adjustmeant);
-void Adjust_Contrast(Image& image, float adjustmeant);
+void Adjust_Brightness(Image& image, int adjustment);
+void Adjust_Contrast(Image& image, float adjustment);
+void Adjust_Temperature(Image& image, float adjustment);
 
 void Scale_Image(Image& image, int outputWidth, int outputHeight);
 

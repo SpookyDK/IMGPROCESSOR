@@ -10,11 +10,13 @@
 #include "image_functions.h"
 #include <QPalette>
 #include <QStyleFactory>
-
-
+#include <stdio.h>
+#include <cudahelper.h>
 
 
 int main(int argc, char *argv[]) {
+    int nCudaDevices = getCudaDeviceCount();
+    std::cout << "cuda devices = " << nCudaDevices << "\n";
     QApplication app(argc, argv);
     QApplication::setStyle(QStyleFactory::create("Fusion"));
 

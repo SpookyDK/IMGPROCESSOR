@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <QImage>
+#include <QDoubleSpinBox>
 #include <chrono>
 
 std::string effectTypeToString(Effect_Type type) {
@@ -59,13 +60,13 @@ void Rotate_Image_90_Counter(Image& image){
 
 }
 
-void Adjust_Brightness(Image& image, int adjustmeant){
+void Adjust_Brightness(Image& image, int adjustment){
         int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
-            int value0 = static_cast<int>(image.data[i]) + adjustmeant;
-            int value1 = static_cast<int>(image.data[i + 1]) + adjustmeant;
-            int value2 = static_cast<int>(image.data[i + 2]) + adjustmeant;
+            int value0 = static_cast<int>(image.data[i]) + adjustment;
+            int value1 = static_cast<int>(image.data[i + 1]) + adjustment;
+            int value2 = static_cast<int>(image.data[i + 2]) + adjustment;
             image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
             image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
             image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
@@ -75,16 +76,28 @@ void Adjust_Brightness(Image& image, int adjustmeant){
 }
 
 
-void Adjust_Contrast(Image& image, float adjustmeant){
+void Adjust_Contrast(Image& image, float adjustment){
         int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
-            int value0 = static_cast<int>( (((float)image.data[i]) - 128) * adjustmeant +128);
-            int value1 = static_cast<int>( (((float)image.data[i+1]) - 128) * adjustmeant +128);
-            int value2 = static_cast<int>( (((float)image.data[i+2]) - 128) * adjustmeant +128);
+            int value0 = static_cast<int>( (((float)image.data[i]) - 128) * adjustment +128);
+            int value1 = static_cast<int>( (((float)image.data[i+1]) - 128) * adjustment +128);
+            int value2 = static_cast<int>( (((float)image.data[i+2]) - 128) * adjustment +128);
             image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
             image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
             image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
+            i += image.channels;
+        }
+        return;
+}
+void Adjust_Temperature(Image& image, float adjustment){
+        int end = image.width * image.height * image.channels;
+        int i = 0;
+        while (i < end){
+            int valueR = static_cast<int>( ((((float)image.data[i]) / 255.0) * std::pow(2, adjustment)) * 255);
+            int valueB = static_cast<int>( ((((float)image.data[i+2]) / 255.0) * std::pow(2, -adjustment)) * 255);
+            image.data[i] = static_cast<unsigned char>(std::clamp(valueR, 0, 255));
+            image.data[i + 2] = static_cast<unsigned char>(std::clamp(valueB, 0, 255));
             i += image.channels;
         }
         return;
@@ -238,6 +251,11 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
             case Scale :
                 std::cout << "\nSCALING IMAGE\n";
                 Scale_Image(workingImage, static_cast<int>(savepoint->args[0]), static_cast<int>(savepoint->args[1]));
+                break;
+            case Temperature :
+                std::cout << "\nADJUSTING TEMPERATURE\n";
+                Adjust_Temperature(workingImage,savepoint->args[0]);
+                break;
             default:
                 std::cout << "\nDEFAULT\n";
                 break;

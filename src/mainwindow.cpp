@@ -9,6 +9,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QListWidget>
+#include <QDoubleSpinBox>
 #include "image_functions.h"
 #include "iostream"
 
@@ -127,6 +128,11 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     deleteButton->setMinimumHeight(40);
     deleteButton->setStyleSheet("font-size: 18px;");
     layout->addWidget(scaleButton);
+
+    QPushButton* temperatureButton = new QPushButton("Temperature layer");
+    deleteButton->setMinimumHeight(40);
+    deleteButton->setStyleSheet("font-size: 18px;");
+    layout->addWidget(temperatureButton);
     // Effect layers list
     layersList = new QListWidget;
     layersList->setDragDropMode(QAbstractItemView::InternalMove); // <<<<<< allows reordering!
@@ -147,7 +153,29 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     connect(brightnessButton, &QPushButton::clicked, this, [this]() {
         layersList->addItem("Brightness Effect");
         imageEffects.push_back(
-            ImageEffect(Effect_Type(Brightness), std::vector<float>{1, 2, 3})
+            ImageEffect(Effect_Type(Brightness), std::vector<float>{0})
+        );
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+
+            qimg = QImage(
+                lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
+    });
+
+    connect(temperatureButton, &QPushButton::clicked, this, [this]() {
+        layersList->addItem("Temperature Effect");
+        imageEffects.push_back(
+            ImageEffect(Effect_Type(Temperature), std::vector<float>{0})
         );
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
@@ -168,7 +196,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     connect(contrastButton, &QPushButton::clicked, this, [this]() {
         layersList->addItem("Contrast Effect");
         imageEffects.push_back(
-            ImageEffect(Effect_Type(Contrast), std::vector<float>{1, 2, 3})
+            ImageEffect(Effect_Type(Contrast), std::vector<float>{1})
         );
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
@@ -352,6 +380,44 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                 break;
             case FlipX :
                 break;
+
+            case Temperature :{
+                    QLabel* label = new QLabel("Temperature:");
+                            QSlider* slider = new QSlider(Qt::Horizontal);
+                            slider->setRange(-100, 100);
+                            slider->setValue(static_cast<int>(effect.args[0]));
+                            QDoubleSpinBox* spinBox = new QDoubleSpinBox();
+                            spinBox->setValue(effect.args[0]);
+                            spinBox->setRange(-1,1);
+                            spinBox->setSingleStep(0.01);
+                            editorLayout->addWidget(label,0,Qt::AlignTop);
+                            editorLayout->addWidget(slider,0,Qt::AlignTop);
+                            editorLayout->addWidget(spinBox,0,Qt::AlignTop);
+
+                            editorLayout->addStretch();
+                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
+                                int value = slider->value();
+                                spinBox->setValue(float(value)/100);
+
+                            });
+                                connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){
+                                float value = (float)spinBox->value();
+                                slider->setValue(static_cast<int>(value*100));
+                                qDebug() << "changed\n";
+                                qDebug() << "test = " << effect.args.size() << "\n";
+
+                                if (effect.args.size() > 0) {
+                                    effect.args[0] = value;
+                                } else {
+                                    qDebug() << "Error: effect has no args!";
+                                }
+                                effect.changed = true;
+                                effect.imageCached = false;
+                                Handle_Effects(imageEffects, images, 0);
+                                Update_Image();
+                                 });
+
+                break;}
             case FlipY :
                 break;
             case Brightness :{
@@ -359,16 +425,28 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                             QSlider* slider = new QSlider(Qt::Horizontal);
                             slider->setRange(-100, 100);
                             slider->setValue(static_cast<int>(effect.args[0]));
+                            QDoubleSpinBox* spinBox = new QDoubleSpinBox();
+                            spinBox->setValue(effect.args[0]);
+                            spinBox->setRange(-100,100);
+                            spinBox->setSingleStep(0.01);
                             editorLayout->addWidget(label,0,Qt::AlignTop);
                             editorLayout->addWidget(slider,0,Qt::AlignTop);
+                            editorLayout->addWidget(spinBox,0,Qt::AlignTop);
+
                             editorLayout->addStretch();
-                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider]() {
+                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
                                 int value = slider->value();
+                                spinBox->setValue(float(value));
+
+                            });
+                                connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){
+                                float value = (float)spinBox->value();
+                                slider->setValue(static_cast<int>(value));
                                 qDebug() << "changed\n";
                                 qDebug() << "test = " << effect.args.size() << "\n";
 
                                 if (effect.args.size() > 0) {
-                                    effect.args[0] = static_cast<float>(value);
+                                    effect.args[0] = value;
                                 } else {
                                     qDebug() << "Error: effect has no args!";
                                 }
@@ -376,23 +454,36 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                                 effect.imageCached = false;
                                 Handle_Effects(imageEffects, images, 0);
                                 Update_Image();
-                            });
+                                 });
+
                 break;}
             case Contrast :{
-                             QLabel* label = new QLabel("Contrast:");
-                             QSlider* slider = new QSlider(Qt::Horizontal);
-                             slider->setRange(0, 300);
-                             slider->setValue(100);
-                             editorLayout->addWidget(label,0,Qt::AlignTop);
-                             editorLayout->addWidget(slider,0,Qt::AlignTop);
-                             editorLayout->addStretch();
-                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider]() {
-                                float value = (float)slider->value() / 100.0;
+                    QLabel* label = new QLabel("Brightness:");
+                            QSlider* slider = new QSlider(Qt::Horizontal);
+                            slider->setRange(0, 300);
+                            slider->setValue(static_cast<int>(effect.args[0]*100));
+                            QDoubleSpinBox* spinBox = new QDoubleSpinBox();
+                            spinBox->setValue(effect.args[0]);
+                            spinBox->setRange(0,3);
+                            spinBox->setSingleStep(0.01);
+                            editorLayout->addWidget(label,0,Qt::AlignTop);
+                            editorLayout->addWidget(slider,0,Qt::AlignTop);
+                            editorLayout->addWidget(spinBox,0,Qt::AlignTop);
+
+                            editorLayout->addStretch();
+                            connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
+                                int value = slider->value();
+                                spinBox->setValue(float(value)/100.0);
+
+                            });
+                                connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){
+                                float value = (float)spinBox->value();
+                                slider->setValue(static_cast<int>(value*100));
                                 qDebug() << "changed\n";
                                 qDebug() << "test = " << effect.args.size() << "\n";
 
                                 if (effect.args.size() > 0) {
-                                    effect.args[0] = static_cast<float>(value);
+                                    effect.args[0] = value;
                                 } else {
                                     qDebug() << "Error: effect has no args!";
                                 }
@@ -400,9 +491,10 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                                 effect.imageCached = false;
                                 Handle_Effects(imageEffects, images, 0);
                                 Update_Image();
-                            });
-                break;
-                           }
+                                 });
+
+                break;}
+                           
             case Saturation :
                 break;
             case Vibrancy : 
