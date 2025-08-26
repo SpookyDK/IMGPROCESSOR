@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QListWidget>
 #include <QDoubleSpinBox>
+#include <QThread>
 #include "image_functions.h"
 #include "iostream"
 
@@ -218,7 +219,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
     connect(scaleButton, &QPushButton::clicked, this, [this]() {
         layersList->addItem("Scale Effect");
         imageEffects.push_back(
-            ImageEffect(Effect_Type(Scale), std::vector<float>{1, 2, 3})
+            ImageEffect(Effect_Type(Scale), std::vector<float>{256,256})
         );
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
@@ -397,12 +398,22 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                             editorLayout->addStretch();
                             connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
                                 int value = slider->value();
+                                spinBox->setValue(float(value)/100+0.01);
+
+                            });
+
+                            connect(slider, &QSlider::valueChanged, this, [this, &effect, slider, spinBox]() {
+                                int value = slider->value();
+                                spinBox->blockSignals(true);
                                 spinBox->setValue(float(value)/100);
+                                spinBox->blockSignals(false);
 
                             });
                                 connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){
                                 float value = (float)spinBox->value();
-                                slider->setValue(static_cast<int>(value*100));
+                                slider->blockSignals(true);         // Temporarily block signals
+                                slider->setValue(static_cast<int>(value * 100));
+                                slider->blockSignals(false);
                                 qDebug() << "changed\n";
                                 qDebug() << "test = " << effect.args.size() << "\n";
 
@@ -502,22 +513,35 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
         }
 }
 
-    void MyMainWindow::Update_Image(){
-        if (images.size() > 0){
-            Image& lastImage = images.back();
 
-            qimg = QImage(
-                lastImage.data,
-                lastImage.width,
-                lastImage.height,
-                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
-                QImage::Format_RGB888
-            );
-            qimg = qimg.copy();
-            label->setPixmap(QPixmap::fromImage(qimg));
-            label->update();
-        }else{
-            qDebug() << "MyMainWindow::Update_Image()__no images to update\n";
+void MyMainWindow::Update_Image() {
+    QThread* workerThread = QThread::create([this] {
+        {
+            QMutexLocker locker(&imagesMutex);
+            Handle_Effects(imageEffects, images, 0);
         }
-    }
 
+        QMetaObject::invokeMethod(this, [this] {
+            QMutexLocker locker(&imagesMutex);
+
+            if (!images.empty()) {
+                Image& lastImage = images.back();
+
+                qimg = QImage(
+                    lastImage.data,
+                    lastImage.width,
+                    lastImage.height,
+                    lastImage.width * lastImage.channels,
+                    QImage::Format_RGB888
+                );
+                qimg = qimg.copy();
+                label->setPixmap(QPixmap::fromImage(qimg));
+                label->update();
+            } else {
+                qDebug() << "MyMainWindow::Update_Image()__no images to update\n";
+            }
+        }, Qt::QueuedConnection);
+    });
+
+    workerThread->start();
+}

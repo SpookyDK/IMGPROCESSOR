@@ -9,12 +9,14 @@
 #include <list>
 #include <QListWidget>
 #include <QBoxLayout>
+#include <QMutex>
 
 class MyMainWindow : public QMainWindow{
     public:
         explicit MyMainWindow();
     private:
         QLabel* label;
+        QMutex imagesMutex;
         std::vector<Image> images;
         QImage qimg;
         QString FilePath;

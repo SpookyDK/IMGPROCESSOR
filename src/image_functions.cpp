@@ -263,7 +263,8 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
         auto timeSwitchEnd = std::chrono::high_resolution_clock::now();
         int switchTime = std::chrono::duration_cast<std::chrono::milliseconds>(timeSwitchEnd - timeSwitchStart).count();
         std::cout << "TIME FOR EFFECT = " << switchTime << "ms\n";
-        std::cout << "PIXEL PR MS = " << imageSize / switchTime << "\n";
+        if (switchTime != 0){
+        std::cout << "PIXEL PR MS = " << imageSize / switchTime << "\n";}
         std::cout << "IT SINCE SAVE = " << itSinceSave << "\n\n";
 
         

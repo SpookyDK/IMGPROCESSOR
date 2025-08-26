@@ -10,8 +10,10 @@ cd build
 cmake ..
 bear -- make
 
-echo -e "\n--- Running program ---"
+
 mv compile_commands.json ../
-perf stat ./MyExecutable
+echo -e "\n--- Running program ---"
+cd ../
+perf stat ./build/MyExecutable
 
 
