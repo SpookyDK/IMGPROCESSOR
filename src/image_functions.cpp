@@ -64,14 +64,15 @@ void Adjust_Brightness(Image& image, const int adjustment){
         unsigned char* data = image.data;
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
-        int i = 0;
-        while (data + 9 <= end){
-            for (int j = 0; j < 9; ++j, ++data) {
-                int val = *data + adjustment;
+        int val;
+        const int inc = image.channels * 4;
+        while (data + inc <= end){
+            for (int j = 0; j < inc; ++j, ++data) {
+                val = *data + adjustment;
                 *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
         while (data < end) {
-                int val = *data + adjustment;
+                val = *data + adjustment;
                 *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
         }
@@ -83,15 +84,16 @@ void Adjust_Contrast(Image& image, const float adjustment){
         unsigned char* data = image.data;
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
-        int i = 0;
         float offset = 128.0;
-        while (data + 9 <= end){
-            for (int j = 0; j < 9; ++j, ++data){
-                int val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+        int val;
+        const int inc = image.channels * 4;
+        while (data + inc <= end){
+            for (int j = 0; j < inc; ++j, ++data){
+                val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
                 *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
         while (data <= end){
-                int val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
                 *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
         }

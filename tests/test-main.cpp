@@ -22,7 +22,7 @@ int main(){
     start_time = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < its; i ++){
         Image temp = image;
-        Adjust_Contrast(temp,1.1);
+        Adjust_Brightness(temp,10);
     }
 
     end_time = std::chrono::high_resolution_clock::now();
@@ -31,7 +31,8 @@ int main(){
     long pixel_per_s = pixels_total / double(time_ms) * 1000.0;
 
     std::cout << "Adjust_Brightness:10 ms = " << time_ms 
-              << ": pixel/S = " << pixel_per_s << "\n";
+              << ": pixel/S = " << pixel_per_s 
+              << " FHD fps = " << pixel_per_s / (1920*1080) << "\n";
 
 
 
