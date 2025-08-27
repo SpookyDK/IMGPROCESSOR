@@ -60,23 +60,27 @@ void Rotate_Image_90_Counter(Image& image){
 
 }
 
-void Adjust_Brightness(Image& image, int adjustment){
-        int end = image.width * image.height * image.channels;
+void Adjust_Brightness(Image& image, const int adjustment){ 
+        unsigned char* data = image.data;
+        int channels = image.channels;
+        const int size = image.width * image.height * image.channels;
+        unsigned char* end = data + size;
         int i = 0;
-        while (i < end){
-            int value0 = static_cast<int>(image.data[i]) + adjustment;
-            int value1 = static_cast<int>(image.data[i + 1]) + adjustment;
-            int value2 = static_cast<int>(image.data[i + 2]) + adjustment;
-            image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
-            image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
-            image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
-            i += image.channels;
+        while (data + 9 <= end){
+            for (int j = 0; j < 9; ++j, ++data) {
+                int val = *data + adjustment;
+                *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
+        while (data < end) {
+                int val = *data + adjustment;
+                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
         }
         return;
 }
 
 
-void Adjust_Contrast(Image& image, float adjustment){
+void Adjust_Contrast(Image& image, const float adjustment){
         int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
@@ -90,7 +94,7 @@ void Adjust_Contrast(Image& image, float adjustment){
         }
         return;
 }
-void Adjust_Temperature(Image& image, float adjustment){
+void Adjust_Temperature(Image& image, const float adjustment){
         int end = image.width * image.height * image.channels;
         int i = 0;
         while (i < end){
@@ -103,7 +107,7 @@ void Adjust_Temperature(Image& image, float adjustment){
         return;
 }
 
-void Scale_Image(Image& image, int outputWidth, int outputHeight) {
+void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
     // allocate new buffer
     unsigned char* scaled = (unsigned char*) malloc(outputWidth * outputHeight * 3);
 

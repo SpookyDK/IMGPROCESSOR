@@ -54,11 +54,11 @@ void Export_Image(Image image, const char* filepath);
 
 void Rotate_Image_90_Counter(Image& image);
 
-void Adjust_Brightness(Image& image, int adjustment);
-void Adjust_Contrast(Image& image, float adjustment);
-void Adjust_Temperature(Image& image, float adjustment);
+void Adjust_Brightness(Image& image, const int adjustment);
+void Adjust_Contrast(Image& image, const float adjustment);
+void Adjust_Temperature(Image& image, const float adjustment);
 
-void Scale_Image(Image& image, int outputWidth, int outputHeight);
+void Scale_Image(Image& image, const int outputWidth, const int outputHeight);
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);
 

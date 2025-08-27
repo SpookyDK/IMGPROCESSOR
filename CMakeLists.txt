@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-
-project(IMGPROCESSOR LANGUAGES CXX CUDA) # CUDA added, others later
+project(IMGPROCESSOR LANGUAGES CXX CUDA)
 
 # =====================
 # Build options (future backends)
@@ -24,7 +23,6 @@ set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type" FORCE)
 # CUDA settings
 # =====================
 if(ENABLE_CUDA)
-    # Let CMake detect GPU architecture automatically (CMake ≥ 3.21 recommended)
     set(CMAKE_CUDA_ARCHITECTURES native)
 endif()
 
@@ -34,50 +32,74 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 # =====================
-# Sources
+# Source files
 # =====================
 file(GLOB CPP_SOURCES "src/*.cpp")
 file(GLOB CUDA_SOURCES "src/*.cu") # only used if CUDA enabled
 
-# =====================
-# Executable
-# =====================
-add_executable(MyExecutable ${CPP_SOURCES})
-
-target_include_directories(MyExecutable PUBLIC include)
-target_link_libraries(MyExecutable Qt6::Widgets)
+# Separate main.cpp from other sources
+list(FILTER CPP_SOURCES EXCLUDE REGEX "src/main.cpp$")
 
 # =====================
-# Backends
+# Core library
 # =====================
+add_library(MyLib
+    ${CPP_SOURCES}
+)
+
+target_include_directories(MyLib PUBLIC include)
+target_link_libraries(MyLib PUBLIC Qt6::Widgets)
+
+# Add CUDA sources if enabled
 if(ENABLE_CUDA)
     message(STATUS "CUDA backend enabled")
-    target_sources(MyExecutable PRIVATE ${CUDA_SOURCES})
-    set_target_properties(MyExecutable PROPERTIES
-        CUDA_SEPARABLE_COMPILATION ON
-    )
+    target_sources(MyLib PRIVATE ${CUDA_SOURCES})
+    set_target_properties(MyLib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 endif()
 
+# =====================
+# Main executable
+# =====================
+add_executable(MyExecutable src/main.cpp)
+target_link_libraries(MyExecutable PRIVATE MyLib Qt6::Widgets)
+
+# =====================
+# Tests
+# =====================
+file(GLOB TEST_SOURCES "tests/*.cpp")
+
+if(TEST_SOURCES)
+    add_executable(MyTests ${TEST_SOURCES})
+    target_include_directories(MyTests PUBLIC include)
+    target_link_libraries(MyTests PRIVATE MyLib Qt6::Widgets)
+
+    enable_testing()
+    add_test(NAME RunUnitTests COMMAND MyTests)
+endif()
+
+# =====================
+# Future backends (placeholders)
+# =====================
 if(ENABLE_OPENCL)
     message(STATUS "OpenCL backend enabled (not yet implemented)")
     # find_package(OpenCL REQUIRED)
-    # target_link_libraries(MyExecutable OpenCL::OpenCL)
+    # target_link_libraries(MyLib OpenCL::OpenCL)
 endif()
 
 if(ENABLE_HIP)
     message(STATUS "HIP backend enabled (not yet implemented)")
     # find_package(HIP REQUIRED)
-    # target_link_libraries(MyExecutable HIP::hip)
+    # target_link_libraries(MyLib HIP::hip)
 endif()
 
 if(ENABLE_ROCM)
     message(STATUS "ROCm backend enabled (not yet implemented)")
     # find_package(ROCM REQUIRED)
-    # target_link_libraries(MyExecutable ROCM::rocm)
+    # target_link_libraries(MyLib ROCM::rocm)
 endif()
 
 # =====================
-# Build Info
+# Build info
 # =====================
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 message(STATUS "CUDA Compiler: ${CMAKE_CUDA_COMPILER_ID} ${CMAKE_CUDA_COMPILER_VERSION}")
