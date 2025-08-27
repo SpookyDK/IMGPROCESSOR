@@ -62,7 +62,6 @@ void Rotate_Image_90_Counter(Image& image){
 
 void Adjust_Brightness(Image& image, const int adjustment){ 
         unsigned char* data = image.data;
-        int channels = image.channels;
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
         int i = 0;
@@ -81,17 +80,22 @@ void Adjust_Brightness(Image& image, const int adjustment){
 
 
 void Adjust_Contrast(Image& image, const float adjustment){
-        int end = image.width * image.height * image.channels;
+        unsigned char* data = image.data;
+        const int size = image.width * image.height * image.channels;
+        unsigned char* end = data + size;
         int i = 0;
-        while (i < end){
-            int value0 = static_cast<int>( (((float)image.data[i]) - 128) * adjustment +128);
-            int value1 = static_cast<int>( (((float)image.data[i+1]) - 128) * adjustment +128);
-            int value2 = static_cast<int>( (((float)image.data[i+2]) - 128) * adjustment +128);
-            image.data[i] = static_cast<unsigned char>(std::clamp(value0, 0, 255));
-            image.data[i + 1] = static_cast<unsigned char>(std::clamp(value1, 0, 255));
-            image.data[i + 2] = static_cast<unsigned char>(std::clamp(value2, 0, 255));
-            i += image.channels;
+        float offset = 128.0;
+        while (data + 9 <= end){
+            for (int j = 0; j < 9; ++j, ++data){
+                int val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
+        while (data <= end){
+                int val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
         }
+
         return;
 }
 void Adjust_Temperature(Image& image, const float adjustment){

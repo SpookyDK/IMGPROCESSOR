@@ -22,7 +22,7 @@ int main(){
     start_time = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < its; i ++){
         Image temp = image;
-        Adjust_Brightness(temp,10);
+        Adjust_Contrast(temp,1.1);
     }
 
     end_time = std::chrono::high_resolution_clock::now();
