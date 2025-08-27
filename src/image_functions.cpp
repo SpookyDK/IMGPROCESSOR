@@ -65,9 +65,8 @@ void Adjust_Brightness(Image& image, const int adjustment){
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
         int val;
-        const int inc = image.channels * 4;
-        while (data + inc <= end){
-            for (int j = 0; j < inc; ++j, ++data) {
+        while (data + 12 <= end){
+            for (int j = 0; j < 12; ++j, ++data) {
                 val = *data + adjustment;
                 *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
@@ -86,9 +85,8 @@ void Adjust_Contrast(Image& image, const float adjustment){
         unsigned char* end = data + size;
         float offset = 128.0;
         int val;
-        const int inc = image.channels * 4;
-        while (data + inc <= end){
-            for (int j = 0; j < inc; ++j, ++data){
+        while (data + 12 <= end){
+            for (int j = 0; j < 12; ++j, ++data){
                 val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
                 *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
