@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QDoubleSpinBox>
 #include <chrono>
+#include <xsimd/xsimd.hpp>
 
 std::string effectTypeToString(Effect_Type type) {
     switch (type) {
@@ -21,11 +22,26 @@ std::string effectTypeToString(Effect_Type type) {
 
 unsigned char* Load_Image(const char* filepath, int& width, int& height, int& channels){
 
-    unsigned char* data = stbi_load(filepath, &width, &height, &channels, 3);
-    if (!data) {
+    unsigned char* raw_data = stbi_load(filepath, &width, &height, &channels, 3);
+    if (!raw_data) {
             throw std::runtime_error(std::string("Failed to load image: ") + stbi_failure_reason());
     }
-    return data;
+    using batch_type = xsimd::batch<unsigned char>;
+    constexpr size_t alignment = batch_type::arch_type::alignment();
+
+    size_t size_in_bytes = width * height * channels;
+    unsigned char* aligned_data = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
+
+    if (!aligned_data) {
+        stbi_image_free(raw_data);
+        throw std::runtime_error("Failed to allocate aligned memory");
+    }
+
+    std::memcpy(aligned_data, raw_data, size_in_bytes);
+
+    stbi_image_free(raw_data);
+
+    return aligned_data;
 }
 
 void Export_Image(Image image, const char* filepath){
@@ -78,6 +94,29 @@ void Adjust_Brightness(Image& image, const int adjustment){
         return;
 }
 
+void Adjust_Brightness_SIMD(Image& image, const int adjustment){ 
+        using batch_uchar = xsimd::batch<unsigned char, xsimd::avx2>;
+        batch_uchar adjustmentBatch(static_cast<unsigned char>(adjustment));
+        unsigned char* data = image.data;
+        const int size = image.width * image.height * image.channels;
+        unsigned char* end = data + size;
+        const size_t xsimd_size = batch_uchar::size;
+        int val;
+        std::cout << xsimd_size << "\n";
+        while (data + xsimd_size <= end){
+                batch_uchar DataBatch = batch_uchar::load_aligned(data);
+                batch_uchar result = DataBatch + adjustmentBatch;
+                result = xsimd::sadd(DataBatch, adjustmentBatch);
+                result.store_aligned(data);
+                data += xsimd_size;
+
+        }
+        while (data < end) {
+                val = *data + adjustment;
+                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
+        return;
+}
 
 void Adjust_Contrast(Image& image, const float adjustment){
         unsigned char* data = image.data;
@@ -99,14 +138,19 @@ void Adjust_Contrast(Image& image, const float adjustment){
         return;
 }
 void Adjust_Temperature(Image& image, const float adjustment){
-        int end = image.width * image.height * image.channels;
-        int i = 0;
-        while (i < end){
-            int valueR = static_cast<int>( ((((float)image.data[i]) / 255.0) * std::pow(2, adjustment)) * 255);
-            int valueB = static_cast<int>( ((((float)image.data[i+2]) / 255.0) * std::pow(2, -adjustment)) * 255);
-            image.data[i] = static_cast<unsigned char>(std::clamp(valueR, 0, 255));
-            image.data[i + 2] = static_cast<unsigned char>(std::clamp(valueB, 0, 255));
-            i += image.channels;
+        unsigned char* data = image.data;
+        const int size = image.width * image.height* image.channels;
+        float adjustment_R = std::pow(2, adjustment);
+        float adjustment_B = std::pow(2, -adjustment);
+        unsigned char* end = data + size;
+        while (data + 3 < end){
+            int valueR = static_cast<int>((float)*data * adjustment_R);
+            *data = static_cast<unsigned char>((valueR & ~(valueR >> 31)) | (-(valueR> 255) & 255));
+            data++;
+            data++;
+            int valueB = static_cast<int>((float)*data * adjustment_B);
+            *data = static_cast<unsigned char>((valueB & ~(valueB >> 31)) | (-(valueB > 255) & 255));
+            data++;
         }
         return;
 }

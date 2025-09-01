@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Profiling-friendly flags
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -fno-omit-frame-pointer -fno-inline ")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -march=native -fno-tree-vectorize -fno-omit-frame-pointer -fno-inline ")
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type" FORCE)
 
 # =====================
