@@ -447,12 +447,23 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                             editorLayout->addStretch();
                             connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
                                 int value = slider->value();
+                                spinBox->setValue(float(value)+1);
+
+                            });
+
+                            connect(slider, &QSlider::valueChanged, this, [this, &effect, slider, spinBox]() {
+                                int value = slider->value();
+                                spinBox->blockSignals(true);
                                 spinBox->setValue(float(value));
+                                spinBox->blockSignals(false);
 
                             });
                                 connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){
                                 float value = (float)spinBox->value();
+
+                                slider->blockSignals(true);
                                 slider->setValue(static_cast<int>(value));
+                                slider->blockSignals(false);
                                 qDebug() << "changed\n";
                                 qDebug() << "test = " << effect.args.size() << "\n";
 
@@ -484,7 +495,15 @@ void MyMainWindow::Set_Editor_Effect(ImageEffect& effect){
                             editorLayout->addStretch();
                             connect(slider, &QSlider::sliderReleased, this, [this, &effect, slider, spinBox]() {
                                 int value = slider->value();
-                                spinBox->setValue(float(value)/100.0);
+                                spinBox->setValue(float(value)/100.0+0.1);
+
+                            });
+
+                            connect(slider, &QSlider::valueChanged, this, [this, &effect, slider, spinBox]() {
+                                int value = slider->value();
+                                spinBox->blockSignals(true);
+                                spinBox->setValue(float(value)/100);
+                                spinBox->blockSignals(false);
 
                             });
                                 connect(spinBox, &QDoubleSpinBox::valueChanged, this, [this, &effect, slider, spinBox](){

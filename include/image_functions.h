@@ -54,7 +54,7 @@ void Export_Image(Image image, const char* filepath);
 
 void Rotate_Image_90_Counter(Image& image);
 
-void Adjust_Brightness(Image& image, const int adjustment);
+void Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* startAddress, const unsigned char* endAddress);
 void Adjust_Brightness_SIMD(Image& image, const int adjustment);
 void Adjust_Contrast(Image& image, const float adjustment);
 void Adjust_Temperature(Image& image, const float adjustment);

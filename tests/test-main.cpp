@@ -3,6 +3,7 @@
 #include <iostream>
 #include <../include/image_functions.h>
 #include <chrono>
+#include <thread>
 
 
 
@@ -15,14 +16,32 @@ int main(){
     auto end_time = std::chrono::high_resolution_clock::now();
     float time_ms = 0;
 
+    int imgSize = image.channels * image.width * image.height ;
 
-    
+    unsigned int numThreads = std::thread::hardware_concurrency();
+    int chunkSize = imgSize  / numThreads;
+    int remainder = imgSize % numThreads;
+
+    std::vector<unsigned char*> starts(numThreads);
+    std::vector<unsigned char*> ends(numThreads);
+
+    std::vector<std::thread> threads;
 
     int its = 100;
     start_time = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < its; i ++){
+        threads.clear();
         Image temp = image;
-        Adjust_Brightness_SIMD(temp,10);
+        unsigned char* start = temp.data;
+            for (unsigned int t = 0; t < numThreads; ++t) {
+                unsigned char* end = start + chunkSize;
+                if (t == numThreads - 1) end += remainder; 
+                threads.emplace_back([&temp, start, end]() {
+                            Adjust_Brightness_SIMD(temp, 10, start, end);
+                        });
+            }
+            for (auto& th : threads) th.join();
+
     }
 
     end_time = std::chrono::high_resolution_clock::now();

@@ -19,5 +19,5 @@ if [[ "$1" == "test" ]]; then
     perf stat ./build/MyTests
 else
     echo -e "\n--- Running program ---"
-    perf stat ./build/MyExecutable
+    gdb -ex "set debuginfod enabled on" -ex run --args ./build/MyExecutable
 fi

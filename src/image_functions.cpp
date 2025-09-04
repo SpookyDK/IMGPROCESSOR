@@ -94,24 +94,20 @@ void Adjust_Brightness(Image& image, const int adjustment){
         return;
 }
 
-void Adjust_Brightness_SIMD(Image& image, const int adjustment){ 
+void Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* startAddress, const unsigned char* endAddress){ 
         using batch_uchar = xsimd::batch<unsigned char, xsimd::avx2>;
         batch_uchar adjustmentBatch(static_cast<unsigned char>(adjustment));
-        unsigned char* data = image.data;
-        const int size = image.width * image.height * image.channels;
-        unsigned char* end = data + size;
+        unsigned char* data = startAddress;
         const size_t xsimd_size = batch_uchar::size;
         int val;
-        std::cout << xsimd_size << "\n";
-        while (data + xsimd_size <= end){
+        while (data + xsimd_size <= endAddress){
                 batch_uchar DataBatch = batch_uchar::load_aligned(data);
-                batch_uchar result = DataBatch + adjustmentBatch;
-                result = xsimd::sadd(DataBatch, adjustmentBatch);
+                batch_uchar result = xsimd::sadd(DataBatch, adjustmentBatch);
                 result.store_aligned(data);
                 data += xsimd_size;
 
         }
-        while (data < end) {
+        while (data < endAddress) {
                 val = *data + adjustment;
                 *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
             }
@@ -156,7 +152,6 @@ void Adjust_Temperature(Image& image, const float adjustment){
 }
 
 void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
-    // allocate new buffer
     unsigned char* scaled = (unsigned char*) malloc(outputWidth * outputHeight * 3);
 
     float xRatio = (outputWidth > 1) ? (float)(image.width  - 1) / (outputWidth  - 1) : 0.0f;
@@ -172,16 +167,13 @@ void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
             float x_weight = (xRatio * j) - xl;
             float y_weight = (yRatio * i) - yl;
 
-            // base indices for the four neighbors
             int idx_a = (yl * image.width + xl) * 3;
             int idx_b = (yl * image.width + xh) * 3;
             int idx_c = (yh * image.width + xl) * 3;
             int idx_d = (yh * image.width + xh) * 3;
 
-            // output index
             int outIdx = (i * outputWidth + j) * 3;
 
-            // ----- Red channel -----
             {
                 float a = image.data[idx_a + 0];
                 float b = image.data[idx_b + 0];
@@ -196,7 +188,6 @@ void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
                 scaled[outIdx + 0] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
             }
 
-            // ----- Green channel -----
             {
                 float a = image.data[idx_a + 1];
                 float b = image.data[idx_b + 1];
@@ -211,7 +202,6 @@ void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
                 scaled[outIdx + 1] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
             }
 
-            // ----- Blue channel -----
             {
                 float a = image.data[idx_a + 2];
                 float b = image.data[idx_b + 2];
@@ -228,11 +218,11 @@ void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
         }
     }
 
-    free(image.data);  // original was malloc'ed
+    free(image.data);  
     image.data = scaled;
     image.width = outputWidth;
     image.height = outputHeight;
-    image.channels = 3; // enforce
+    image.channels = 3; 
 }
 
 void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
@@ -324,6 +314,11 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
 
         if (itSinceSave > 2){
             std::cout << "SAVING CACHE....\n";
+            if (!workingImage.data || imageSize == 0) {
+                std::cerr << "Error: workingImage has no data!" << std::endl;
+                std::cout << "Image empty\n" ;
+                continue;
+            }
             unsigned char* copieddata = new unsigned char[imageSize];
             std::memcpy(copieddata, workingImage.data, imageSize);
             images.push_back(Image(copieddata, workingImage.width, workingImage.height, workingImage.channels));
