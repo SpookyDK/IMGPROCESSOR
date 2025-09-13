@@ -10,6 +10,7 @@
 #include <chrono>
 #include <xsimd/xsimd.hpp>
 
+
 std::string effectTypeToString(Effect_Type type) {
     switch (type) {
         case Brightness: return "Brightness";
@@ -20,35 +21,53 @@ std::string effectTypeToString(Effect_Type type) {
     return "Unknown";
 }
 
-unsigned char* Load_Image(const char* filepath, int& width, int& height, int& channels){
+void* Load_Image(const char* filepath, int& width, int& height, int& channels, ImageType imageType){
 
     unsigned char* raw_data = stbi_load(filepath, &width, &height, &channels, 3);
     if (!raw_data) {
             throw std::runtime_error(std::string("Failed to load image: ") + stbi_failure_reason());
     }
-    using batch_type = xsimd::batch<unsigned char>;
-    constexpr size_t alignment = batch_type::arch_type::alignment();
 
-    size_t size_in_bytes = width * height * channels;
-    unsigned char* aligned_data = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
+    if (imageType = IMG_UCHAR){
 
-    if (!aligned_data) {
+        using batch_type = xsimd::batch<unsigned char>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
+
+        size_t size_in_bytes = width * height * channels;
+        unsigned char* aligned_data = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
+
+        if (!aligned_data) {
+            stbi_image_free(raw_data);
+            throw std::runtime_error("Failed to allocate aligned memory");
+        }
+        std::memcpy(aligned_data, raw_data, size_in_bytes);
         stbi_image_free(raw_data);
-        throw std::runtime_error("Failed to allocate aligned memory");
+        return aligned_data;
+    }else if (imageType == IMG_FLOAT){
+        using batch_type = xsimd::batch<float>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
+
+        size_t size_in_bytes = width * height * channels;
+        float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
+
+        if (!aligned_data) {
+            stbi_image_free(raw_data);
+            throw std::runtime_error("Failed to allocate aligned memory");
+        }
+        std::memcpy(aligned_data, raw_data, size_in_bytes);
+        stbi_image_free(raw_data);
+        return aligned_data;
+
     }
 
-    std::memcpy(aligned_data, raw_data, size_in_bytes);
 
-    stbi_image_free(raw_data);
-
-    return aligned_data;
 }
 
-void Export_Image(Image image, const char* filepath){
+image_error_code Export_Image(Image image, const char* filepath){
     stbi_write_jpg(filepath, image.width, image.height, image.channels, image.data, 0);
 }
 
-void Rotate_Image_90_Counter(Image& image){
+image_error_code Rotate_Image_90_Counter(Image& image){
     if (image.data){
         unsigned char* __restrict rotated = (unsigned char*) malloc(image.width * image.height * image.channels);
         int y = 0;
@@ -76,7 +95,7 @@ void Rotate_Image_90_Counter(Image& image){
 
 }
 
-void Adjust_Brightness(Image& image, const int adjustment){ 
+image_error_code Adjust_Brightness(Image& image, const int adjustment){ 
         unsigned char* data = image.data;
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
@@ -94,9 +113,9 @@ void Adjust_Brightness(Image& image, const int adjustment){
         return;
 }
 
-void Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* startAddress, const unsigned char* endAddress){ 
-        using batch_uchar = xsimd::batch<unsigned char, xsimd::avx2>;
-        batch_uchar adjustmentBatch(static_cast<unsigned char>(adjustment));
+image_error_code Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* startAddress, const unsigned char* endAddress){ 
+        using batch_uchar = xsimd::batch<unsigned char, xsimd::avx512bw>;
+        batch_uchar adjustmentBatch((unsigned char)adjustment);
         unsigned char* data = startAddress;
         const size_t xsimd_size = batch_uchar::size;
         int val;
@@ -109,12 +128,14 @@ void Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* s
         }
         while (data < endAddress) {
                 val = *data + adjustment;
-                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+                if (val < 0) val = 0;
+                else if (val > 255) val = 255;
+                *data = (unsigned char)val;
             }
         return;
 }
 
-void Adjust_Contrast(Image& image, const float adjustment){
+image_error_code Adjust_Contrast(Image& image, const float adjustment){
         unsigned char* data = image.data;
         const int size = image.width * image.height * image.channels;
         unsigned char* end = data + size;
@@ -133,7 +154,45 @@ void Adjust_Contrast(Image& image, const float adjustment){
 
         return;
 }
-void Adjust_Temperature(Image& image, const float adjustment){
+
+image_error_code Adjust_Contrast_SIMD(Image& image, const float adjustment, unsigned char* startAddress, const unsigned char* endAddress){
+        using batch_float = xsimd::batch<float>;
+        using batch_char = xsimd::batch<unsigned char>;
+        using batch_int = xsimd::batch<int>;
+        batch_float adjustmentBatch(adjustment);
+        unsigned char* data = startAddress;
+        const size_t xsimd_size = batch_float::size;
+        float offset = 128.0;
+        batch_float offsetBatch(offset);
+        int val;
+        while (data + xsimd_size <= endAddress){
+            batch_char rawData = batch_char::load_aligned(data);
+
+            // Step 1: Convert batch_char to batch<int> (or batch<unsigned int>)
+            batch_int intData = xsimd::batch_cast<int>(rawData);
+
+            // Step 2: Convert batch<int> to batch<float>
+            batch_float floatData = xsimd::to_float(intData);
+            floatData = (floatData - offsetBatch) * adjustmentBatch + offsetBatch;
+
+            // Clamp to [0, 255]
+            floatData = xsimd::min(xsimd::max(floatData, batch_float(0.f)), batch_float(255.f));
+
+            intData = xsimd::to_int(floatData);
+            rawData = xsimd::narrow_cast<unsigned char>(intData);
+
+            // Narrow to uint8_t and store
+            xsimd::store_aligned(data, rawData);
+            data += xsimd_size;
+        }
+        while (data <= endAddress){
+                val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+            }
+
+        return;
+}
+image_error_code Adjust_Temperature(Image& image, const float adjustment){
         unsigned char* data = image.data;
         const int size = image.width * image.height* image.channels;
         float adjustment_R = std::pow(2, adjustment);
@@ -151,7 +210,7 @@ void Adjust_Temperature(Image& image, const float adjustment){
         return;
 }
 
-void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
+image_error_code Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
     unsigned char* scaled = (unsigned char*) malloc(outputWidth * outputHeight * 3);
 
     float xRatio = (outputWidth > 1) ? (float)(image.width  - 1) / (outputWidth  - 1) : 0.0f;
@@ -225,7 +284,7 @@ void Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
     image.channels = 3; 
 }
 
-void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
+image_error_code Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
 
     std::cout << "__________________\n";
     auto timeStartHandleEffects = std::chrono::high_resolution_clock::now();
@@ -347,7 +406,7 @@ void Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images,
     }
 }
 
-void Print_Effects(std::list<ImageEffect> effects){
+image_error_code Print_Effects(std::list<ImageEffect> effects){
     for (auto &effect : effects) {
             std::cout << effectTypeToString(effect.effect)
                       << " | changed: " << effect.changed
@@ -361,3 +420,12 @@ void Print_Effects(std::list<ImageEffect> effects){
 
 }
 
+char* image_error_code_2_char(image_error_code errorCode){
+    switch (errorCode) {
+        case Success: return "Success";
+        case ImageType_not_supported:   return "ImageType_not_supported";
+        case Error_not_specified: return "Error_not_specified";
+        case Vibrancy:   return "Vibrancy";
+    }
+    return "Unknown";
+}
