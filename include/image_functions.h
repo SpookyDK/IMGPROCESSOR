@@ -52,8 +52,7 @@ struct Image{
     void* data;
     ImageType type;
     int width, height, channels;
-    Image(unsigned char* _data, int _width, int _height, int _channels){
-        data = _data;
+    Image(int _width, int _height, int _channels){
         width = _width;
         height = _height;
         channels = _channels;
@@ -61,7 +60,7 @@ struct Image{
 };
 
 
-void* Load_Image(const char* filepath, int& width, int& height, int& channels, ImageType imageType);
+void* Load_Image(const char* filepath, ImageType imageType, Image& image);
 
 image_error_code Export_Image(Image image, const char* filepath);
 image_error_code Rotate_Image_90_Counter(Image& image);

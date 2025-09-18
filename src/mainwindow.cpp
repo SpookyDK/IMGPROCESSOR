@@ -44,16 +44,11 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                             FilePath = fileName;
                             QByteArray byteArray = fileName.toUtf8();
                             images.clear();
-                            int width = 0, height = 0, channels = 0;
-                            unsigned char* data = Load_Image(byteArray.constData(), width, height, channels);
-
-                            // Force 3 channels for safety
-                            const int channelsRGB = 3;
-
-                            images.push_back(Image(data, width, height, channelsRGB));
+                            images.push_back(Image(0, 0, 0));
+                            Load_Image(byteArray.constData(), IMG_FLOAT, images.front());
                             if (imageEffects.empty()){
                                 float displayRatio = (float)w / (float)h;
-                                float imageRatio = (float)width / (float)height;
+                                float imageRatio = (float)images.front().width / (float)images.front().height;
                                 std::cout << "windows w:h = " << w << ":" << h << "\n";
                                 if (displayRatio >= imageRatio){
                                     imageEffects.push_back(ImageEffect(Scale, std::vector<float>{(float)h*imageRatio,(float)h}));
