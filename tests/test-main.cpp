@@ -10,16 +10,19 @@
 
 int main(){
     std::cout.imbue(std::locale("en_US.UTF-8"));
-    int width = 0, height = 0, channels = 0;
-    unsigned char* data = Load_Image("test.JPG", width, height, channels);
-    Image image = Image(data,width,height,channels);
+    Image image(0,0,0);
+    Load_Image("test.JPG", IMG_UCHAR, image);
     auto start_time = std::chrono::high_resolution_clock::now();
     auto end_time = std::chrono::high_resolution_clock::now();
     float time_ms = 0;
 
     int imgSize = image.channels * image.width * image.height ;
-
-    size_t size_in_bytes = width * height * channels;
+    size_t size_in_bytes;
+    if (image.type == IMG_UCHAR){
+        size_in_bytes = imgSize;
+    }else if (image.type == IMG_FLOAT){
+        size_in_bytes= imgSize * sizeof(float);
+    }
     unsigned int numThreads = std::thread::hardware_concurrency();
     size_t bytesPerThread = ( size_in_bytes + numThreads - 1) / numThreads; // ceil div
     bytesPerThread = (bytesPerThread + 63) & ~63; // round up to multiple of 64
@@ -29,17 +32,7 @@ int main(){
     std::vector<unsigned char*> ends(numThreads);
 
     std::vector<std::thread> threads;
-
-
-    using batch_type = xsimd::batch<unsigned char, xsimd::avx512bw>;
-    constexpr size_t alignment = batch_type::arch_type::alignment();
-    unsigned char* workData = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
-    memcpy(workData, image.data, size_in_bytes);
-    
-    std::cout << "simd width = " << batch_type::size << "\n";
-    std::cout << "using " << numThreads << " threads\n";
-
-    int its = 1000;
+    int its = 100;
     start_time = std::chrono::high_resolution_clock::now();
 
     int64_t pixels_total;

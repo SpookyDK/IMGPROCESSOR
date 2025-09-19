@@ -60,7 +60,7 @@ struct Image{
 };
 
 
-void* Load_Image(const char* filepath, ImageType imageType, Image& image);
+image_error_code Load_Image(const char* filepath, ImageType imageType, Image& image);
 
 image_error_code Export_Image(Image image, const char* filepath);
 image_error_code Rotate_Image_90_Counter(Image& image);
@@ -69,7 +69,7 @@ image_error_code Adjust_Brightness(Image& image, const int adjustment);
 image_error_code Adjust_Brightness_SIMD(Image& image, const int adjustment, unsigned char* startAddress, const unsigned char* endAddress);
 image_error_code Adjust_Contrast(Image& image, const float adjustment);
 image_error_code Adjust_Temperature(Image& image, const float adjustment);
-
+image_error_code Convert_Image_Format(Image& image, const ImageType type);
 image_error_code Scale_Image(Image& image, const int outputWidth, const int outputHeight);
 
 image_error_code Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint);

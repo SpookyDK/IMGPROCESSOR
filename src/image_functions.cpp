@@ -22,7 +22,7 @@ std::string effectTypeToString(Effect_Type type) {
     return "Unknown";
 }
 
-void* Load_Image(const char* filepath, const ImageType imageType, Image& image){
+image_error_code Load_Image(const char* filepath, const ImageType imageType, Image& image){
 
     unsigned char* raw_data = stbi_load(filepath, &image.width, &image.height, &image.channels, 3);
     if (!raw_data) {
@@ -43,21 +43,23 @@ void* Load_Image(const char* filepath, const ImageType imageType, Image& image){
         }
         std::memcpy(aligned_data, raw_data, size_in_bytes);
         stbi_image_free(raw_data);
-        return aligned_data;
+        image.data = aligned_data;
+        return Success;
     }else if (imageType == IMG_FLOAT){
-        using batch_type = xsimd::batch<float>;
-        constexpr size_t alignment = batch_type::arch_type::alignment();
-
-        size_t size_in_bytes = image.width * image.height * image.channels * sizeof(float);
-        float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
-
-        if (!aligned_data) {
-            stbi_image_free(raw_data);
-            throw std::runtime_error("Failed to allocate aligned memory");
-        }
-        std::memcpy(aligned_data, raw_data, size_in_bytes);
-        stbi_image_free(raw_data);
-        return aligned_data;
+        // using batch_type = xsimd::batch<float>;
+        // constexpr size_t alignment = batch_type::arch_type::alignment();
+        //
+        // size_t size_in_bytes = image.width * image.height * image.channels * sizeof(float);
+        // float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
+        //
+        // if (!aligned_data) {
+        //     stbi_image_free(raw_data);
+        //     throw std::runtime_error("Failed to allocate aligned memory");
+        // }
+        // std::memcpy(aligned_data, raw_data, size_in_bytes);
+        // stbi_image_free(raw_data);
+        // return aligned_data;
+        return ImageType_not_supported;
 
     }
 
@@ -66,11 +68,50 @@ void* Load_Image(const char* filepath, const ImageType imageType, Image& image){
 
 image_error_code Export_Image(Image image, const char* filepath){
     stbi_write_jpg(filepath, image.width, image.height, image.channels, image.data, 0);
+    return Success;
 }
 
+image_error_code Convert_Image_Format(Image& image, const ImageType outType){
+    const size_t size = image.width * image.height * image.channels;
+    if (image.type == IMG_FLOAT){
+        float* data = (float*)image.data;
+        if (outType == IMG_FLOAT){
+            image.data = data;
+            image.type = IMG_FLOAT;
+            return Success;
+        }else if (outType == IMG_UCHAR){
+            unsigned char convertedData[size];
+            for (int i = 0; i < size; i++){
+                convertedData[i] = (unsigned char)data[i];
+            }
+            free(data);
+            image.data = convertedData;
+            image.type = IMG_UCHAR;
+            return Success;
+        }
+    }else if (image.type == IMG_UCHAR){
+        unsigned char* data = (unsigned char*)image.data;
+
+        if (outType == IMG_FLOAT){
+            float convertedData[size];
+            for (int i = 0; i < size; i++){
+                convertedData[i] = (float)data[i];
+            }
+            image.data = convertedData;
+            image.type = IMG_FLOAT;
+            free(data);
+            return Success;
+        }else if (outType == IMG_UCHAR){
+            image.data = data;
+            image.type = IMG_UCHAR;
+            return Success;
+        }
+    }
+    return ImageType_not_supported;
+}
 image_error_code Rotate_Image_90_Counter(Image& image){
     if (image.data){
-        if (image.type = IMG_UCHAR){
+        if (image.type == IMG_UCHAR){
         unsigned char* data = (unsigned char*)image.data;
         unsigned char* __restrict rotated = (unsigned char*) malloc(image.width * image.height * image.channels);
         int y = 0;
@@ -94,7 +135,7 @@ image_error_code Rotate_Image_90_Counter(Image& image){
 
         }
         delete[] rotated;
-        }else if(image.type = IMG_FLOAT){
+        }else if(image.type == IMG_FLOAT){
             float* data = (float*)image.data;
             float* __restrict rotated = (float*) malloc(image.width * image.height * image.channels);
             int y = 0;
@@ -163,78 +204,90 @@ image_error_code Adjust_Brightness_SIMD(Image& image, const int adjustment, unsi
 }
 
 image_error_code Adjust_Contrast(Image& image, const float adjustment){
-        unsigned char* data = (unsigned char*)image.data;
         const int size = image.width * image.height * image.channels;
-        unsigned char* end = data + size;
-        float offset = 128.0;
-        int val;
-        while (data + 12 <= end){
-            for (int j = 0; j < 12; ++j, ++data){
-                val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
-                *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+        if (image.type == IMG_UCHAR){
+            unsigned char* data = (unsigned char*)image.data;
+            unsigned char* end = data + size;
+            float offset = 128.0;
+            int val;
+            while (data + 12 <= end){
+                for (int j = 0; j < 12; ++j, ++data){
+                    val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                    *data = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+                }
+            while (data <= end){
+                    val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
+                    *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
+                }
             }
-        while (data <= end){
-                val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
-                *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
-            }
-        }
 
-        return Success;
+            return Success;
+        } else if (image.type == IMG_FLOAT){
+            using batch_float = xsimd::batch<float>;
+            batch_float adjustmentBatch(adjustment);
+            const size_t xsimd_size = batch_float::size;
+            float* data = (float*)image.data;
+            float* end = data + size;
+            float val;
+            while (data + xsimd_size <= end){
+                    batch_float DataBatch = batch_float::load_aligned(data);
+                    batch_float result = DataBatch * adjustmentBatch;
+                    result.store_aligned(data);
+                    data += xsimd_size;
+
+            }
+            while (data < end) {
+                    val = *data + adjustment;
+                    if (val < 0) val = 0;
+                    else if (val > 255) val = 255;
+                    *data = (unsigned char)val;
+                }
+            return Success;
+        }
+        return ImageType_not_supported;
 }
 
-// image_error_code Adjust_Contrast_SIMD(Image& image, const float adjustment, unsigned char* startAddress, const unsigned char* endAddress){
-//         using batch_float = xsimd::batch<float>;
-//         using batch_char = xsimd::batch<unsigned char>;
-//         using batch_int = xsimd::batch<int>;
-//         batch_float adjustmentBatch(adjustment);
-//         unsigned char* data = startAddress;
-//         const size_t xsimd_size = batch_float::size;
-//         float offset = 128.0;
-//         batch_float offsetBatch(offset);
-//         int val;
-//         while (data + xsimd_size <= endAddress){
-//             batch_char rawData = batch_char::load_aligned(data);
-//
-//             // Step 1: Convert batch_char to batch<int> (or batch<unsigned int>)
-//             batch_int intData = xsimd::batch_cast<int>(rawData);
-//
-//             // Step 2: Convert batch<int> to batch<float>
-//             batch_float floatData = xsimd::to_float(intData);
-//             floatData = (floatData - offsetBatch) * adjustmentBatch + offsetBatch;
-//
-//             // Clamp to [0, 255]
-//             floatData = xsimd::min(xsimd::max(floatData, batch_float(0.f)), batch_float(255.f));
-//
-//             intData = xsimd::to_int(floatData);
-//             rawData = xsimd::narrow_cast<unsigned char>(intData);
-//
-//             // Narrow to uint8_t and store
-//             xsimd::store_aligned(data, rawData);
-//             data += xsimd_size;
-//         }
-//         while (data <= endAddress){
-//                 val = static_cast<int>( (((float)*data) - offset) * adjustment + offset);
-//                 *data++ = static_cast<unsigned char>((val & ~(val >> 31)) | (-(val > 255) & 255));
-//             }
-//
-//         return Success;
-// }
 image_error_code Adjust_Temperature(Image& image, const float adjustment){
-        unsigned char* data = (unsigned char*)image.data;
-        const int size = image.width * image.height* image.channels;
-        float adjustment_R = std::pow(2, adjustment);
-        float adjustment_B = std::pow(2, -adjustment);
-        unsigned char* end = data + size;
-        while (data + 3 < end){
-            int valueR = static_cast<int>((float)*data * adjustment_R);
-            *data = static_cast<unsigned char>((valueR & ~(valueR >> 31)) | (-(valueR> 255) & 255));
-            data++;
-            data++;
-            int valueB = static_cast<int>((float)*data * adjustment_B);
-            *data = static_cast<unsigned char>((valueB & ~(valueB >> 31)) | (-(valueB > 255) & 255));
-            data++;
-        }
-        return Success;
+            const int size = image.width * image.height* image.channels;
+            float adjustment_R = std::pow(2, adjustment);
+            float adjustment_B = std::pow(2, -adjustment);
+        if (image.type == IMG_UCHAR){
+            unsigned char* data = (unsigned char*)image.data;
+            unsigned char* end = data + size;
+            while (data + 3 < end){
+                int valueR = static_cast<int>((float)*data * adjustment_R);
+                *data = static_cast<unsigned char>((valueR & ~(valueR >> 31)) | (-(valueR> 255) & 255));
+                data++;
+                data++;
+                int valueB = static_cast<int>((float)*data * adjustment_B);
+                *data = static_cast<unsigned char>((valueB & ~(valueB >> 31)) | (-(valueB > 255) & 255));
+                data++;
+            }
+            return Success;
+        }else if (image.type == IMG_FLOAT){
+            return ImageType_not_supported;
+            float* data = (float*)image.data;
+            float* end = data + size;
+            using batch_float = xsimd::batch<unsigned char>;
+            batch_float adjustmentBatch_R(adjustment_R);
+            batch_float adjustmentBatch_B(adjustment_R);
+            int xsimd_size = batch_float::size;
+            float val;
+            while (data + xsimd_size <= end){
+                    batch_float DataBatch = batch_float::load_aligned(data);
+                    batch_float result = xsimd::sadd(DataBatch, adjustmentBatch_B);
+                    result.store_aligned(data);
+                    data += xsimd_size;
+
+            }
+            while (data < end) {
+                    val = *data + adjustment;
+                    if (val < 0) val = 0;
+                    else if (val > 255) val = 255;
+                    *data = (unsigned char)val;
+                }
+                return Success;
+            }
 }
 
 image_error_code Scale_Image(Image& image, const int outputWidth, const int outputHeight) {

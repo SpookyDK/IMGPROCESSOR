@@ -67,7 +67,12 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                             }
 
                             // Use correct stride for QImage
-                            qimg = QImage(images.back().data, images.back().width, images.back().height, images.back().width * images.back().channels, QImage::Format_RGB888);
+                            if (images.back().type == IMG_UCHAR){
+                                qimg = QImage((unsigned char*)images.back().data, images.back().width, images.back().height, images.back().width * images.back().channels, QImage::Format_RGB888);
+                            }else if (images.back().type == IMG_FLOAT){
+                                Convert_Image_Format(images.back(), IMG_UCHAR);
+                                qimg = QImage((unsigned char*)images.back().data, images.back().width, images.back().height, images.back().width * images.back().channels, QImage::Format_RGB888);
+                            }
                             label->setPixmap(QPixmap::fromImage(qimg));
                         }
                     }
@@ -154,14 +159,25 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
@@ -176,14 +192,25 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
@@ -197,14 +224,25 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
@@ -219,14 +257,25 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
@@ -248,14 +297,25 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
@@ -282,19 +342,29 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
         if (images.size() > 0 && layersList) {
             Handle_Effects(imageEffects, images, 0);
             Image& lastImage = images.back();
-
+            if (lastImage.type == IMG_UCHAR){
             qimg = QImage(
-                lastImage.data,
+                (unsigned char*)lastImage.data,
                 lastImage.width,
                 lastImage.height,
                 lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
                 QImage::Format_RGB888
             );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
+                qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            }
+
             qimg = qimg.copy();
             label->setPixmap(QPixmap::fromImage(qimg));
             label->update();
-        }
-        }
+        }}
     });
 
     connect(layersList->model(), &QAbstractItemModel::rowsMoved, this,
@@ -320,21 +390,32 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                 imageEffects.splice(toIt, imageEffects, fromIt);
             }
             Print_Effects(imageEffects);
-            if (images.size() > 0 && layersList) {
-                Handle_Effects(imageEffects, images, 0);
-                Image& lastImage = images.back();
-
+        if (images.size() > 0 && layersList) {
+            Handle_Effects(imageEffects, images, 0);
+            Image& lastImage = images.back();
+            if (lastImage.type == IMG_UCHAR){
+            qimg = QImage(
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
+            } else if (lastImage.type == IMG_FLOAT){
+                Convert_Image_Format(lastImage, IMG_UCHAR);
                 qimg = QImage(
-                    lastImage.data,
-                    lastImage.width,
-                    lastImage.height,
-                    lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
-                    QImage::Format_RGB888
-                );
-                qimg = qimg.copy();
-                label->setPixmap(QPixmap::fromImage(qimg));
-                label->update();
+                (unsigned char*)lastImage.data,
+                lastImage.width,
+                lastImage.height,
+                lastImage.width * lastImage.channels, // bytes per line, NOT width*height*channels
+                QImage::Format_RGB888
+            );
             }
+
+            qimg = qimg.copy();
+            label->setPixmap(QPixmap::fromImage(qimg));
+            label->update();
+        }
         });
 
 
@@ -540,9 +621,12 @@ void MyMainWindow::Update_Image() {
 
             if (!images.empty()) {
                 Image& lastImage = images.back();
+                if (lastImage.type != IMG_UCHAR){
+                    Convert_Image_Format(lastImage, IMG_UCHAR);
+                }
 
                 qimg = QImage(
-                    lastImage.data,
+                    (unsigned char*)lastImage.data,
                     lastImage.width,
                     lastImage.height,
                     lastImage.width * lastImage.channels,
