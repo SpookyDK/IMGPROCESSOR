@@ -60,9 +60,9 @@ struct Image{
 };
 
 
-image_error_code Load_Image(const char* filepath, ImageType imageType, Image& image);
+image_error_code Load_Image(const char* filepath, const ImageType imageType, Image& image);
 
-image_error_code Export_Image(Image image, const char* filepath);
+image_error_code Export_Image(const Image& image, const char* filepath);
 image_error_code Rotate_Image_90_Counter(Image& image);
 
 image_error_code Adjust_Brightness(Image& image, const int adjustment);

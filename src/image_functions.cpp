@@ -66,7 +66,7 @@ image_error_code Load_Image(const char* filepath, const ImageType imageType, Ima
 
 }
 
-image_error_code Export_Image(Image image, const char* filepath){
+image_error_code Export_Image(const Image& image, const char* filepath){
     stbi_write_jpg(filepath, image.width, image.height, image.channels, image.data, 0);
     return Success;
 }
