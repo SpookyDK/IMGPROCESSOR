@@ -45,7 +45,7 @@ MyMainWindow::MyMainWindow() : QMainWindow(){
                             QByteArray byteArray = fileName.toUtf8();
                             images.clear();
                             images.push_back(Image(0, 0, 0));
-                            Load_Image(byteArray.constData(), IMG_FLOAT, images.front());
+                            Load_Image(byteArray.constData(), IMG_UCHAR, images.front());
                             if (imageEffects.empty()){
                                 float displayRatio = (float)w / (float)h;
                                 float imageRatio = (float)images.front().width / (float)images.front().height;

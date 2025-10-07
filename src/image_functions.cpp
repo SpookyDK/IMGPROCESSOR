@@ -44,26 +44,59 @@ image_error_code Load_Image(const char* filepath, const ImageType imageType, Ima
         std::memcpy(aligned_data, raw_data, size_in_bytes);
         stbi_image_free(raw_data);
         image.data = aligned_data;
+        image.type = IMG_UCHAR;
         return Success;
     }else if (imageType == IMG_FLOAT){
-        // using batch_type = xsimd::batch<float>;
-        // constexpr size_t alignment = batch_type::arch_type::alignment();
-        //
-        // size_t size_in_bytes = image.width * image.height * image.channels * sizeof(float);
-        // float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
-        //
-        // if (!aligned_data) {
-        //     stbi_image_free(raw_data);
-        //     throw std::runtime_error("Failed to allocate aligned memory");
-        // }
-        // std::memcpy(aligned_data, raw_data, size_in_bytes);
-        // stbi_image_free(raw_data);
-        // return aligned_data;
-        return ImageType_not_supported;
+        using batch_type = xsimd::batch<float>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
+
+        size_t size_in_bytes = image.width * image.height * image.channels * sizeof(float);
+        float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
+
+        if (!aligned_data) {
+            stbi_image_free(raw_data);
+            throw std::runtime_error("Failed to allocate aligned memory");
+        }
+        std::memcpy(aligned_data, raw_data, size_in_bytes);
+        stbi_image_free(raw_data);
+        image.data = aligned_data;
+        image.type = IMG_FLOAT;
+        return Success;
 
     }
 
 
+}
+image_error_code Copy_Image(const Image& image_in, Image& image_out){
+    if (image_in.type == IMG_UCHAR){
+        using batch_type = xsimd::batch<unsigned char>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
+
+        size_t size_in_bytes = image_in.width * image_in.height * image_in.channels;
+        unsigned char* aligned_data = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
+
+        std::memcpy(aligned_data, image_in.data, size_in_bytes);
+        image_out.data = aligned_data;
+        image_out.width = image_in.width;
+        image_out.height = image_in.height;
+        image_out.channels = image_in.channels;
+        image_out.type = image_in.type;
+        return Success;
+    }else if (image_in.type == IMG_FLOAT){
+        using batch_type = xsimd::batch<float>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
+
+        size_t size_in_bytes = image_in.width * image_in.height * image_in.channels * sizeof(float);
+        float* aligned_data = static_cast<float*>(std::aligned_alloc(alignment, size_in_bytes));
+
+        std::memcpy(aligned_data, image_in.data, size_in_bytes);
+        image_out.data = aligned_data;
+        image_out.width = image_in.width;
+        image_out.height = image_in.height;
+        image_out.channels = image_in.channels;
+        image_out.type = image_in.type;
+        return Success;
+    }else{return ImageType_not_supported;}
 }
 
 image_error_code Export_Image(const Image& image, const char* filepath){
@@ -291,203 +324,132 @@ image_error_code Adjust_Temperature(Image& image, const float adjustment){
 }
 
 image_error_code Scale_Image(Image& image, const int outputWidth, const int outputHeight) {
-    unsigned char* scaled = (unsigned char*) malloc(outputWidth * outputHeight * 3);
 
-    float xRatio = (outputWidth > 1) ? (float)(image.width  - 1) / (outputWidth  - 1) : 0.0f;
-    float yRatio = (outputHeight > 1)? (float)(image.height - 1) / (outputHeight - 1): 0.0f;
-    unsigned char* data = (unsigned char*)image.data;
+    if (image.type == IMG_UCHAR){
+        using batch_type = xsimd::batch<unsigned char>;
+        constexpr size_t alignment = batch_type::arch_type::alignment();
 
-    for (int i = 0; i < outputHeight; i++) {
-        for (int j = 0; j < outputWidth; j++) {
-            int xl = (int)floor(xRatio * j);
-            int yl = (int)floor(yRatio * i);
-            int xh = std::min(xl + 1, image.width  - 1);
-            int yh = std::min(yl + 1, image.height - 1);
+        size_t size_in_bytes = image.width * image.height * image.channels;
+        unsigned char* scaled_data = static_cast<unsigned char*>(std::aligned_alloc(alignment, size_in_bytes));
 
-            float x_weight = (xRatio * j) - xl;
-            float y_weight = (yRatio * i) - yl;
+        float xRatio = (outputWidth > 1) ? (float)(image.width  - 1) / (outputWidth  - 1) : 0.0f;
+        float yRatio = (outputHeight > 1)? (float)(image.height - 1) / (outputHeight - 1): 0.0f;
+        unsigned char* data = (unsigned char*)image.data;
 
-            int idx_a = (yl * image.width + xl) * 3;
-            int idx_b = (yl * image.width + xh) * 3;
-            int idx_c = (yh * image.width + xl) * 3;
-            int idx_d = (yh * image.width + xh) * 3;
+        for (int i = 0; i < outputHeight; i++) {
+            for (int j = 0; j < outputWidth; j++) {
+                int xl = (int)floor(xRatio * j);
+                int yl = (int)floor(yRatio * i);
+                int xh = std::min(xl + 1, image.width  - 1);
+                int yh = std::min(yl + 1, image.height - 1);
 
-            int outIdx = (i * outputWidth + j) * 3;
+                float x_weight = (xRatio * j) - xl;
+                float y_weight = (yRatio * i) - yl;
 
-            {
-                float a = data[idx_a + 0];
-                float b = data[idx_b + 0];
-                float c = data[idx_c + 0];
-                float d = data[idx_d + 0];
+                int idx_a = (yl * image.width + xl) * 3;
+                int idx_b = (yl * image.width + xh) * 3;
+                int idx_c = (yh * image.width + xl) * 3;
+                int idx_d = (yh * image.width + xh) * 3;
 
-                float pixel = a * (1 - x_weight) * (1 - y_weight) +
-                              b * x_weight * (1 - y_weight) +
-                              c * (1 - x_weight) * y_weight +
-                              d * x_weight * y_weight;
+                int outIdx = (i * outputWidth + j) * 3;
 
-                scaled[outIdx + 0] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
-            }
+                {
+                    float a = data[idx_a + 0];
+                    float b = data[idx_b + 0];
+                    float c = data[idx_c + 0];
+                    float d = data[idx_d + 0];
 
-            {
-                float a = data[idx_a + 1];
-                float b = data[idx_b + 1];
-                float c = data[idx_c + 1];
-                float d = data[idx_d + 1];
+                    float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                                  b * x_weight * (1 - y_weight) +
+                                  c * (1 - x_weight) * y_weight +
+                                  d * x_weight * y_weight;
 
-                float pixel = a * (1 - x_weight) * (1 - y_weight) +
-                              b * x_weight * (1 - y_weight) +
-                              c * (1 - x_weight) * y_weight +
-                              d * x_weight * y_weight;
+                    scaled_data[outIdx + 0] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+                }
 
-                scaled[outIdx + 1] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
-            }
+                {
+                    float a = data[idx_a + 1];
+                    float b = data[idx_b + 1];
+                    float c = data[idx_c + 1];
+                    float d = data[idx_d + 1];
 
-            {
-                float a = data[idx_a + 2];
-                float b = data[idx_b + 2];
-                float c = data[idx_c + 2];
-                float d = data[idx_d + 2];
+                    float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                                  b * x_weight * (1 - y_weight) +
+                                  c * (1 - x_weight) * y_weight +
+                                  d * x_weight * y_weight;
 
-                float pixel = a * (1 - x_weight) * (1 - y_weight) +
-                              b * x_weight * (1 - y_weight) +
-                              c * (1 - x_weight) * y_weight +
-                              d * x_weight * y_weight;
+                    scaled_data[outIdx + 1] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+                }
 
-                scaled[outIdx + 2] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+                {
+                    float a = data[idx_a + 2];
+                    float b = data[idx_b + 2];
+                    float c = data[idx_c + 2];
+                    float d = data[idx_d + 2];
+
+                    float pixel = a * (1 - x_weight) * (1 - y_weight) +
+                                  b * x_weight * (1 - y_weight) +
+                                  c * (1 - x_weight) * y_weight +
+                                  d * x_weight * y_weight;
+
+                    scaled_data[outIdx + 2] = static_cast<unsigned char>(std::clamp(pixel, 0.0f, 255.0f));
+                }
             }
         }
+
+        free(image.data);  
+        image.data = scaled_data;
+        image.width = outputWidth;
+        image.height = outputHeight;
+        image.channels = 3; 
+        return Success;
+    }else if(image.type == IMG_FLOAT){
+        return ImageType_not_supported;
+    }else{
+        return ImageType_not_supported;
     }
 
-    free(image.data);  
-    image.data = scaled;
-    image.width = outputWidth;
-    image.height = outputHeight;
-    image.channels = 3; 
 }
 
 image_error_code Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Image>& images, int stopPoint){
 
     std::cout << "__________________\n";
     auto timeStartHandleEffects = std::chrono::high_resolution_clock::now();
-    auto iterator = Effects.begin();
     auto savepoint = Effects.begin();
-    if (images.size() > 0){
-    while (iterator != Effects.end()){
-        if (iterator-> changed){
-            break;
-        }
-        if (iterator->imageCached && iterator->cacheIndex > 0 && iterator->cacheIndex < images.size()){
-            savepoint = iterator;
-        }
-        ++iterator;
-    }
-    int itSinceSave = 0;
-    int indexImage = savepoint->cacheIndex;
-    std::cout << "CACHE INDEX = " << indexImage << "\n";
-    if (indexImage == 0){
-        std::cout << "RESETING CACHE\n";
-        int i = 1;
-        while (i < images.size() -1){
-            delete[] images[i].data;
-            i++;
-        }
-        images.erase(images.begin() +1, images.end()); 
-        std::cout << "NEW CACHE SIZE = " << images.size() << "\n";
-
-    }else if (indexImage != images.size()-1){
-        std::cout << "MINIMIZING CACHE\n" << images.size();
-        int i = indexImage + 1;
-        while (i < images.size() -1){
-            delete[] images[i].data;
-            i++;
-        }
-        images.erase(images.begin() + indexImage, images.end()); 
-        std::cout << "NEW CACHE SIZE = " << images.size() << "\n";
-    }
-    auto timeEndHandleEffects = std::chrono::high_resolution_clock::now();
-    int timeHandleEffects = std::chrono::duration_cast<std::chrono::milliseconds>(timeEndHandleEffects - timeStartHandleEffects).count();
-    std::cout << "TIME FOR EFFECT LIST = " << timeHandleEffects << "ms\n";
-    int imageSize = images[indexImage].height*images[indexImage].width*images[indexImage].channels;
-    //Malloc copy last to temp;
-    unsigned char* copy = new unsigned char[imageSize];
-    std::memcpy(copy, images[indexImage].data, imageSize);
-    Image workingImage(images[indexImage].width, images[indexImage].height, images[indexImage].channels);
-    workingImage.data = copy;
-    auto timeSwitchStart = std::chrono::high_resolution_clock::now();
-    auto timeSwitchEnd = std::chrono::high_resolution_clock::now();
-    while (savepoint != Effects.end()){
-        timeSwitchStart = std::chrono::high_resolution_clock::now();
-        switch(savepoint->effect){
-            case Brightness :
-                std::cout << "\nADJUSTING BRIGHTNESS\n";
-                Adjust_Brightness(workingImage, savepoint->args[0]);
-                break;
-            case Contrast :
-                std::cout << "\nADJUSTING CONTRAST\n";
-                Adjust_Contrast(workingImage, savepoint->args[0]);
-                break;
-            case RotateCounterClock:
-                std::cout << "\nROTATION 90 COUNTER\n";
-                Rotate_Image_90_Counter(workingImage);
-                break;
-            case Scale :
-                std::cout << "\nSCALING IMAGE\n";
-                Scale_Image(workingImage, static_cast<int>(savepoint->args[0]), static_cast<int>(savepoint->args[1]));
-                break;
-            case Temperature :
-                std::cout << "\nADJUSTING TEMPERATURE\n";
-                Adjust_Temperature(workingImage,savepoint->args[0]);
-                break;
-            default:
-                std::cout << "\nDEFAULT\n";
-                break;
-        }
-        auto timeSwitchEnd = std::chrono::high_resolution_clock::now();
-        int switchTime = std::chrono::duration_cast<std::chrono::milliseconds>(timeSwitchEnd - timeSwitchStart).count();
-        std::cout << "TIME FOR EFFECT = " << switchTime << "ms\n";
-        if (switchTime != 0){
-        std::cout << "PIXEL PR MS = " << imageSize / switchTime << "\n";}
-        std::cout << "IT SINCE SAVE = " << itSinceSave << "\n\n";
-
-        
-
-
-        if (itSinceSave > 2){
-            std::cout << "SAVING CACHE....\n";
-            if (!workingImage.data || imageSize == 0) {
-                std::cerr << "Error: workingImage has no data!" << std::endl;
-                std::cout << "Image empty\n" ;
-                continue;
+    Image workingImage = Image(images[0].width, images[0].height, images[0].channels);
+    Copy_Image(images[0], workingImage);
+        if (images.size() > 0){
+            while (savepoint != Effects.end()){
+                switch(savepoint->effect){
+                    case Brightness :
+                        std::cout << "\nADJUSTING BRIGHTNESS\n";
+                        Adjust_Brightness(workingImage, savepoint->args[0]);
+                        break;
+                    case Contrast :
+                        std::cout << "\nADJUSTING CONTRAST\n";
+                        Adjust_Contrast(workingImage, savepoint->args[0]);
+                        break;
+                    case RotateCounterClock:
+                        std::cout << "\nROTATION 90 COUNTER\n";
+                        Rotate_Image_90_Counter(workingImage);
+                        break;
+                    case Scale :
+                        std::cout << "\nSCALING IMAGE\n";
+                        Scale_Image(workingImage, static_cast<int>(savepoint->args[0]), static_cast<int>(savepoint->args[1]));
+                        break;
+                    case Temperature :
+                        std::cout << "\nADJUSTING TEMPERATURE\n";
+                        Adjust_Temperature(workingImage,savepoint->args[0]);
+                        break;
+                    default:
+                        std::cout << "\nDEFAULT\n";
+                        break;
+                }
+                savepoint++;
             }
-            unsigned char* copieddata = new unsigned char[imageSize];
-            std::memcpy(copieddata, workingImage.data, imageSize);
-            Image temp(workingImage.width, workingImage.height, workingImage.channels);
-            temp.data = copieddata;
-
-            images.push_back(temp);
-            savepoint->cacheIndex = images.size()-1;
-            savepoint->imageCached = true;
-            itSinceSave = 0;
-
-            
         }
-
-        itSinceSave++;
-        savepoint->changed = false;
-        ++savepoint;
-
-    }
-    if (images.size() == 1){
         images.push_back(workingImage);
-    }else{
-        images.back() = workingImage;
-    }
-    //Add final image as last;
-    std::cout<< "TOTAL IMAGES CACHED=  "<< images.size() << "\n";
-
-    auto timeEndEffects = std::chrono::high_resolution_clock::now();
-    std::cout << "TOTAL PROCESSING TIME = " << timeEndEffects - timeStartHandleEffects << "\n";
-    }
+        return Success;
 }
 
 image_error_code Print_Effects(std::list<ImageEffect> effects){
