@@ -416,7 +416,15 @@ image_error_code Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Ima
     std::cout << "__________________\n";
     auto timeStartHandleEffects = std::chrono::high_resolution_clock::now();
     auto savepoint = Effects.begin();
+    for (size_t i = 1; i < images.size(); ++i) {
+        free(images[i].data);
+            images[i].data = NULL;
+    }
+    if (images.size() > 1) {
+        images.erase(images.begin() + 1, images.end());
+    }
     Image workingImage = Image(images[0].width, images[0].height, images[0].channels);
+    std::cout << "vector length" << images.size() << "pointer" << images[1].data;
     Copy_Image(images[0], workingImage);
         if (images.size() > 0){
             while (savepoint != Effects.end()){
@@ -448,7 +456,11 @@ image_error_code Handle_Effects(std::list<ImageEffect>& Effects, std::vector<Ima
                 savepoint++;
             }
         }
-        images.push_back(workingImage);
+        Image processed_image = Image(0,0,0);
+        Copy_Image(workingImage, processed_image);
+        free(workingImage.data);
+        workingImage.data = NULL;
+        images.push_back(processed_image);
         return Success;
 }
 
